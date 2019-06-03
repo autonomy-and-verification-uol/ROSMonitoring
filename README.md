@@ -11,9 +11,10 @@ The instrumentation folder contains the generator program (Python). It can be us
 This generator program takes a configuration file in input (the config.yaml contained in the same folder). Using this simple configuration file we can customize the instrumentation process.
 
 The default config.yaml is:
-ROS:
-  path: /home/angelo/catkin_ws/src/rosmon/scripts/
-  topics: all
+
+ ROS:
+   path: /home/angelo/catkin_ws/src/rosmon/scripts/
+   topics: all
  
 
 
