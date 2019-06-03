@@ -218,7 +218,7 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-        '''.format(yaml_file =  os.path.abspath('./monitor.yaml'),ros_project = path, topics = [topic for (topic, _, _) in topics_with_types])
+        '''.format(yaml_file =  os.path.abspath('../monitor/monitor.yaml'),ros_project = path, topics = [topic for (topic, _, _) in topics_with_types])
         monitor.write(imports + msg_type_imports + pub_with_callbacks + pub_dict + monitor_def + other_callbacks)
 
 def create_monitor_config(): # function which creates the YAML config file whoch will be used by the monitor
