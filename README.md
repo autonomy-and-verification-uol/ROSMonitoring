@@ -13,10 +13,8 @@ This generator program takes a configuration file in input (the config.yaml cont
 The default config.yaml is:
 
  ROS:
-   
-   path: <path_to_ROS_project>
-   
-   topics: all
+  path: <path_to_ROS_project>
+  topics: all
  
 
 
