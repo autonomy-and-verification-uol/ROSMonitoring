@@ -28,7 +28,17 @@ The webserver folder contains two subfolders: prolog and rml
 The Prolog folder contains the prolog files implementing the semantics of the specification language chosen: RML.
 In this folder we can find the semantics of the Trace Expression formalism and the implementation of a Webserver
 prolog. This Webserver Prolog can be used as a bridge between ROS nodes and our specifications. Thanks to the 
-instrumentation part, we can generate automatically a monitor which will communicate to the WebServer Prolog using WebSockets (in the case of Online Runtime Verification). 
+instrumentation part, we can generate automatically a monitor which will communicate to the WebServer Prolog using WebSockets (in the case of Online Runtime Verification).
+
+The other folder contains example of specifications using RML.
+
+# How to use ROSMonitoring (through an example extracted by ROS Tutorial)
+
+In order to show how to use ROSMonitoring, the fisrt thing we need to do is to create a ROS project.
+We can get the example of ROS nodes in Python from:
+
+
+
 
 
 
