@@ -12,10 +12,15 @@ This generator program takes a configuration file in input (the config.yaml cont
 
 The default config.yaml is:
 ```yaml
- ROS:
-  path: <path_to_ROS_project>
-  topics: all
+ROS:
+ path: <path_to_ROS_project>
+ topics: all
 ```
+The 'path' item refers to the path to the ROS project we want to instrument.
+The 'topics' is the list of topics we are interested in instrumenting (what the monitor will check at runtime).
+The keyword 'all' is used instead of listing all the topics. Using 'all', we do not limit which topics will be 
+instrumented, and we instrument all the topics used in all the Python nodes contained in the ROS project.
+
 
 
 
