@@ -2,5 +2,5 @@
 # this file is given in input to generator.py
 
 ROS:
-  path: /home/angelo/catkin_ws/src/rosmon/scripts/
+  path: <path_to_ROS_project>
   topics: all
