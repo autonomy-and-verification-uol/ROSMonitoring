@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+import os
+import sys
+import yaml
+import argparse
+
+from generator import *
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        description='this is a Python program for instrumenting and generating a monitor for achieving the Runtime Verification of a ROS project',
+        formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('--config_file',
+        help='YAML configuration file',
+        default = './config.yaml',
+        metavar='STRING')
+    args = parser.parse_args() # maybe in the future we will need more arguments, for now it's just one
+
+    with open(args.config_file, 'r') as stream: # open the config file for the generator
+        try:
+            config = yaml.safe_load(stream) # load the config file
+            if 'ROS' in config: # check if the ROS key is present
+                print(config['ROS']) # debug log
+                if 'path' in config['ROS'] and 'topics' in config['ROS']: # check for the other necessary keys
+                    if config['ROS']['topics'] == 'all': # all is used when all the topics has to be checked
+                        create_monitor(instrument_files(config['ROS']['path']), config['ROS']['path'])
+                    else: # only a list of topics has to be checked
+                        create_monitor(instrument_files(config['ROS']['path'], config['ROS']['topics']), config['ROS']['path'])
+                    create_monitor_config() # create the YAML configuration file which will be used by the monitor
+                else: # the YAML file is not valid
+                    print('ROS member has to include the path and the list of topics')
+            else: # the YAML file is not valid
+                print('config file must contain ROS key')
+        except yaml.YAMLError as exc:
+            print(exc)
+
+if __name__ == '__main__':
+    main(sys.argv)
