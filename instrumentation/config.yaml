@@ -1,13 +1,5 @@
 #config file for the instrumentation of ROS
 # this file is given in input to generator.py
-#
-# RV:
-#   online:
-#     url: 127.0.0.1
-#     port: 8080
-#   #offline:
-#   #  trace_file:
-#   error: log
 
 ROS:
   path: /home/angelo/catkin_ws/src/rosmon/scripts/
