@@ -21,6 +21,15 @@ The 'topics' is the list of topics we are interested in instrumenting (what the 
 The keyword 'all' is used instead of listing all the topics. Using 'all', we do not limit which topics will be 
 instrumented, and we instrument all the topics used in all the Python nodes contained in the ROS project.
 
+# Webserver
+
+The webserver folder contains two subfolders: prolog and rml
+
+The Prolog folder contains the prolog files implementing the semantics of the specification language chosen: RML.
+In this folder we can find the semantics of the Trace Expression formalism and the implementation of a Webserver
+prolog. This Webserver Prolog can be used as a bridge between ROS nodes and our specifications. Thanks to the 
+instrumentation part, we can generate automatically a monitor which will communicate to the WebServer Prolog using WebSockets (in the case of Online Runtime Verification). 
+
 
 
 
