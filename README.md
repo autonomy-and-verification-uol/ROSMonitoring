@@ -12,9 +12,10 @@ This generator program takes a configuration file in input (the config.yaml cont
 
 The default config.yaml is:
 
+ '''yaml
  ROS:
    path: /home/angelo/catkin_ws/src/rosmon/scripts/
-   topics: all
+   topics: all'''
  
 
 
