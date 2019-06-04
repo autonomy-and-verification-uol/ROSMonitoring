@@ -19,9 +19,11 @@ $ sudo apt-get install swi-prolog
 ```
 
 ## Java (https://openjdk.java.net/install/):
-For instance, installing openjdk 9:
+For instance, installing openjdk 11 would be:
 ```bash
-$ sudo apt install openjdk-9-jre-headless
+$ sudo add-apt-repository ppa:openjdk-r/ppa
+$ sudo apt-get update
+$ sudo apt-get install openjdk-11-jdk
 ```
 
 # ROSMonitoring
