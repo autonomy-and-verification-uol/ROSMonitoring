@@ -69,11 +69,22 @@ We need the ROSMonitoring implementation in order to instrument and verify our n
 
 In the terminal:
 
+ $ roscd beginner_tutorials/
  $ git clone https://github.com/autonomy-and-verification-uol/ROSMonitoring.git
+
+Now you should have your local ROSMonitoring folder.
 
 ### Instrument talker and listener nodes
 
 The first thing to do in order to monitor our nodes is to instrument them. Thanks to this step, our monitor will be able to intercept the topics of our interest (even though for now we have only the 'chatter' topic).
+
+ $ cd ROSMonitoring/instrumentation/
+
+Inside this folder you should find: config.yaml, generator, and generator.py.
+The Python program we are going to execute is generator. But, before doing that, we need to change the configuration file, config.yaml. This configuration file allows us to select which ROS project we want to instrument, and which topics we are interested in ('all' is the keyword for considering all the topics used by the nodes). If we are interested in checking only a subset of the topics used by our nodes, following the syntax of YAML, we can list all the topics one by one instead.
+We need to change <path_to_ROS_project> into ~/catkin_ws/src/beginner_tutorials
+We can leave topics as it is. Note that in this case we could remove the keyword all, and add chatter, without changing the final outcome.
+ 
 
 
 
