@@ -347,7 +347,7 @@ The specification file test.rml (and its compilation test.pl) are already prepar
 
 In order to filter wrong events, we need nodes generating wrong events first.
 
-Let us change the talker.py file.
+Let us change the talker.py file in the following way:
 ```python
 import rospy
 from std_msgs.msg import String
@@ -367,6 +367,87 @@ def talker():
         pub_c.publish(count)
         count += 1
         rate.sleep()
-...
+        
+if __name__ == '__main__':
+    try:
+        talker()
+    except rospy.ROSInterruptException:
+        pass
 ```
+With respect to the previous version, now the talker node publishes also a counter.
+
+And of course, also the listener must change in order to care about the new topic.
+```python
+import rospy
+from std_msgs.msg import String
+from std_msgs.msg import Int32
+
+def callback(data):
+    rospy.loginfo(rospy.get_caller_id() + 'I heard %s', data.data)
+
+def callback_c(data):
+    rospy.loginfo(rospy.get_caller_id() + 'I heard count %s', str(data.data))
+
+def listener():
+
+    # In ROS, nodes are uniquely named. If two nodes with the same
+    # name are launched, the previous one is kicked off. The
+    # anonymous=True flag means that rospy will choose a unique
+    # name for our 'listener' node so that multiple listeners can
+    # run simultaneously.
+    rospy.init_node('listener', anonymous=True)
+
+    rospy.Subscriber('chatter', String, callback)
+
+    rospy.Subscriber('count', Int32, callback_c)
+
+    # spin() simply keeps python from exiting until this node is stopped
+    rospy.spin()
+
+if __name__ == '__main__':
+    listener()
+```
+We now have two callbacks which are doing the same thing, to log on the terminal.
+
+Since now we have changed the files, we need to re-instrument them.
+```bash
+$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/instrumentation/
+$ ./generator
+{'path': '~/catkin_ws/src/rosmon/scripts/', 'topics': 'all'}
+('chatter', ('String', 'from std_msgs.msg import String'), 'queue_size=10')
+('count', ('Int32', 'from std_msgs.msg import Int32'), 'queue_size=10')
+```
+Since we have not selected any specific topics inside monitor.yaml, we automatically consider the new count topic among the topics to be monitored.
+
+The specification given in test.rml is very trivial, but, it constrains the valid values for count.
+```json
+hello matches {topic:'chatter',data:'hello'};
+count matches {topic:'count',data:val} with val > 100;
+
+Main = (hello \/ count)*;
+```
+The first two lines refer to the kind of events our specification handles.
+In particular, the second one has a constraint on the value observed for the topic count. Very naively, we are just saying that the count events are valid only if greater than 100.
+
+If we now change the monitor.yaml configuration file in order to filter the wrong events (since we executed generator, we have to uncomment again the Online part).
+```yaml
+# monitor: # offline RV
+#  log: ./log.txt # file where the monitor will log the observed events
+#  when: offline # when the RV will be applied
+
+monitor: # online RV
+   action: filter # default action (optional) # the other possible value is: filter
+   log: ./log.txt # file where the monitor will log the observed events
+   webserver: # the webserver running and ready to check the specification
+     port: 8080 # the port where it is listening
+     url: 127.0.0.1 # the url where it is listening
+   when: online # when the RV will be applied
+```
+In this way, we are saying to the monitor that we want to filter the wrong events.
+
+Let us try again the Online verification (as before)!
+
+
+
+
 
