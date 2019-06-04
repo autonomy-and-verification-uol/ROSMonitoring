@@ -419,7 +419,7 @@ $ ./generator
 Since we have not selected any specific topics inside monitor.yaml, we automatically consider the new count topic among the topics to be monitored.
 
 The specification given in test.rml is very trivial, but, it constrains the valid values for count.
-```json
+```prolog
 hello matches {topic:'chatter',data:'hello'};
 count matches {topic:'count',data:val} with val > 100;
 
