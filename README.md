@@ -59,7 +59,16 @@ At the end of this tutorial you should have the talker and listener node working
 To run the example, follow the instructions at:
 http://wiki.ros.org/ROS/Tutorials/ExaminingPublisherSubscriber
 
-Ath the end of the tutorial, the talker and listener nodes should be able to communicate freely. 
+At the end of the tutorial, the talker and listener nodes should be able to communicate freely. 
+
+In order to simplify the monitoring process and make it easier, we need to change a small thing inside talker.py.
+
+Line 47 must become:
+```python
+...
+hello_str = "hello"
+...
+```
 
 Now we are ready to start monitoring our talker and listener nodes!
 
@@ -232,6 +241,7 @@ The last step for the Offline version is to check the log file against a formal 
 To do this, first we copy the log file into the prolog folder, and then we run the monitor (using the already given sh file).
 
 ```bash
+$ cp ~/catkin_ws/log.txt ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/
 $ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/prolog/
 $ 
 ```
