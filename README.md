@@ -69,21 +69,22 @@ We need the ROSMonitoring implementation in order to instrument and verify our n
 
 In the terminal:
 
+```bash
  $ roscd beginner_tutorials/
  $ git clone https://github.com/autonomy-and-verification-uol/ROSMonitoring.git
-
+```
 Now you should have your local ROSMonitoring folder.
 
 ### Python prerequisites
 
 pip (https://pypi.org/project/pip/)
-
+```bash
 $ sudo apt install pip
-
+```
 Using pip we can then install the websocket library.
-
+```bash
 $ pip install websocket
-
+```
 ### Instrument talker and listener nodes
 
 The first thing to do in order to monitor our nodes is to instrument them. Thanks to this step, our monitor will be able to intercept the topics of our interest (even though for now we have only the 'chatter' topic).
@@ -137,11 +138,11 @@ The default configuration file for the monitor is set for Offline RV. In the com
 
 The generator has not created the ROSMonitor folder, but it has also instrumented our nodes.
 Let us have a look inside the scripts folder.
-
+```bash
 $ cd ~/catkin_ws/src/beginner_tutorials/scripts/
 $ ls
 listener_instrumented.py  listener.py  talker_instrumented.py  talker.py
-
+```
 As we can see, now we have two new files: talker_instrumented.py and listener_instrumented.py
 
 These two instrumented files are equal to the previous ones. The only difference is in the substitution of the topics which are published by talker. If we compare talker.py with talker_instrumented.py, we find a small difference.
@@ -169,15 +170,15 @@ $ chmod +x talker_instrumented.py
 $ chmod +x listener_instrumented.py
 ```
 In a terminal then
-
+```bash
 $ cd ~/catkin_ws/
 $ rosrun beginner_tutorials talker_instrumented.py
-
+```
 and in a different one
-
+```bash
 $ cd ~/catkin_ws/
 $ rosrun beginner_tutorials listener_instrumented.py
-
+```
 The talker should print the topics on the terminal as before. But, the listener should print nothing.
 
 ### Adding the monitor in the middle (Offline version).
@@ -185,13 +186,14 @@ The talker should print the topics on the terminal as before. But, the listener 
 In order to re-establish the communication between our nodes, we have to execute the monitor which has been created by the generator program.
 
 On a different terminal:
-
+```bash
 $ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/ROSMonitor/
 $ chmod +x monitor.py
 $ cd ~/catkin_ws/
 $ rosrun beginner_tutorials monitor.py
 [INFO] [1559652181.670203]: monitor started and ready: Offline
 
+```
 
 
 
