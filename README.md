@@ -155,8 +155,18 @@ In fact, the instrumented talker publishes on a different topic now ('chatter_mo
 $ cd ~/catkin_ws/src/beginner_tutorials/scripts/
 $ chmod +x talker_instrumented.py
 $ chmod +x listener_instrumented.py
+
+In a terminal then
+
 $ cd ~/catkin_ws/
 $ rosrun beginner_tutorials talker_instrumented.py
+
+and in a different one
+
+$ cd ~/catkin_ws/
+$ rosrun beginner_tutorials listener_instrumented.py
+
+The talker should print the topics on the terminal as before. But, the listener should print nothing.
 
 ### Adding the monitor in the middle (Offline version).
 
