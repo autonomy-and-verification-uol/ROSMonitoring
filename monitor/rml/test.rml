@@ -1,4 +1,4 @@
 hello matches {topic:'chatter',data:'hello'};
 count matches {topic:'count',data:val} with val > 100;
 
-Main = (hello \/ count) Main;
+Main = (hello \/ count)*;

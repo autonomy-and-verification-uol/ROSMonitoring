@@ -3,4 +3,4 @@
 match(_event, hello) :- deep_subdict(_{'data':"hello",'topic':"chatter"}, _event).
 match(_event, count) :- deep_subdict(_{'data':Val,'topic':"count"}, _event), >(Val, 100).
 match(_, any).
-trace_expression('Main', Main) :- Main=(((hello:eps)\/(count:eps))*Main).
+trace_expression('Main', Main) :- Main=star(((hello:eps)\/(count:eps))).
