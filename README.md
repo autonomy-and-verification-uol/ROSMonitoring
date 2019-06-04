@@ -253,7 +253,12 @@ To do this, first we copy the log file into the prolog folder, and then we run t
 $ cp ~/catkin_ws/log.txt ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/
 $ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/prolog/
 $ sh offline_monitor.sh ../rml/test.pl ../log.txt
-
+...
+matched event #89
+matched event #90
+matched event #91
+matched event #92
+Execution terminated correctly
 ```
  
  
