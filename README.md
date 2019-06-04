@@ -37,7 +37,7 @@ Before going on we need a machine with ROS installed. It is not important which 
 
 In the following we are going to use ROS Melodic, but as mentioned before, you can use another distribution.
 
-## Install ROS Melodic
+## Install ROS Kinetic
 http://wiki.ros.org/melodic/Installation
 
 ## Create ROS package
