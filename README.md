@@ -125,7 +125,33 @@ monitor: # offline RV
  
 The default configuration file for the monitor is set for Offline RV. In the commented part we have a possible use for the Online version. The YAML syntax is very intuitive, focusing for now on the Offline parameters, we can set where the events observed by the monitor will be saved (default here is log.txt), and at which time the RV will be applied (in this case Offline, setting the corresponding 'when' item).
 
-Let us try the Offline approach first.
+The generator has not created the ROSMonitor folder, but it has also instrumented our nodes.
+Let us have a look inside the scripts folder.
+
+$ cd ~/catkin_ws/src/beginner_tutorials/scripts/
+$ ls
+listener_instrumented.py  listener.py  talker_instrumented.py  talker.py
+
+As we can see, now we have two new files: talker_instrumented.py and listener_instrumented.py
+
+These two instrumented files are equal to the previous ones. The only difference is in the substitution of the topics which are published by talker. If we compare talker.py with talker_instrumented.py, we find a small difference.
+
+In talker.py we have:
+```python
+...
+pub = rospy.Publisher('chatter', String, queue_size=10)
+...
+```
+While in talker_instrumented.py we have:
+```python
+...
+pub = rospy.Publisher('chatter_mon', String, queue_size=10)
+...
+```
+
+Let us try the Offline approach first!
+
+
 
 
  
