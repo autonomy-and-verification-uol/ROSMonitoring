@@ -1,3 +1,5 @@
+Repository containing the Python implementation for integrating RML (Runtime Monitoring Language, https://rmlatdibris.github.io/) verification and ROS (https://www.ros.org/).
+
 # Prerequisities
 
 ROSMonitoring works only for ROS distributions >=Indigo (i.e. where rospy is supported).
@@ -27,7 +29,6 @@ $ sudo apt-get install openjdk-11-jdk
 ```
 
 # ROSMonitoring
-Repository containing the Python implementation for integrating RML (Runtime Monitoring Language, https://github.com/RMLatDIBRIS) verification and ROS (https://www.ros.org/).
 
 This repository contains two folders:
  - instrumentation
