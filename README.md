@@ -83,7 +83,7 @@ The first thing to do in order to monitor our nodes is to instrument them. Thank
 Inside this folder you should find: config.yaml, generator, and generator.py.
 The Python program we are going to execute is generator. But, before doing that, we need to change the configuration file, config.yaml. This configuration file allows us to select which ROS project we want to instrument, and which topics we are interested in ('all' is the keyword for considering all the topics used by the nodes). If we are interested in checking only a subset of the topics used by our nodes, following the syntax of YAML, we can list all the topics one by one instead.
 We need to change <path_to_ROS_project> into ~/catkin_ws/src/beginner_tutorials
-We can leave topics as it is. Note that in this case we could remove the keyword all, and add chatter, without changing the final outcome.
+We can leave the topics list as it is. Note that in this case we could remove the keyword all, and add chatter, without changing the final outcome.
 
 The new config.yaml file should look like this:
 ```yaml
@@ -91,10 +91,11 @@ The new config.yaml file should look like this:
 #this file is given in input to generator.py
 
 ROS:
-  path: ~/catkin_ws/src/beginner_tutorials/
+  path: /home//catkin_ws/src/beginner_tutorials/scripts/
   topics: all
 ```
- 
+
+
 
 
 
