@@ -85,6 +85,7 @@ http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28python%29
 
 At the end of this tutorial you should have the talker and listener node working.
 To run the example, follow the instructions at:
+
 http://wiki.ros.org/ROS/Tutorials/ExaminingPublisherSubscriber
 
 At the end of the tutorial, the talker and listener nodes should be able to communicate freely. 
@@ -105,7 +106,6 @@ Now we are ready to start monitoring our talker and listener nodes!
 We need the ROSMonitoring implementation in order to instrument and verify our nodes. So, now is the time to clone the repository, if you have not already.
 
 In the terminal:
-
 ```bash
  $ roscd beginner_tutorials/
  $ git clone https://github.com/autonomy-and-verification-uol/ROSMonitoring.git
@@ -146,7 +146,6 @@ If we go back to the parent folder, we should now find a new folder called ROSMo
  - monitor.yaml is the configuration file for the monitor node.
  
 Before going on, let us have a look at monitor.yaml
- 
 ```yaml
 monitor: # offline RV
  log: ./log.txt # file where the monitor will log the observed events
@@ -238,7 +237,6 @@ Since we have selected Offline RV, the monitor is only logging the events.
 We can find the automatically generated log file (log.txt) inside ~/catkin_ws folder.
 
 The log file should look like this:
-
 ```json
 {"topic": "chatter", "data": "hello", "time": 1559638159.43485}
 {"topic": "chatter", "data": "hello", "time": 1559638159.534461}
@@ -248,7 +246,6 @@ The log file should look like this:
 
 The last step for the Offline version is to check the log file against a formal specification.
 To do this, first we copy the log file into the prolog folder, and then we run the monitor (using the already given sh file).
-
 ```bash
 $ cp ~/catkin_ws/log.txt ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/
 $ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/prolog/
@@ -268,7 +265,6 @@ offline_monitor.sh expects two arguments:
 The test.pl is the lower level representation of test.rml (contained in the same folder). If we want to verify new properties, we only need to write them followin the RML syntax (creating a corresponding .rml file). And then, we can compile the new rml specifications using the rml-compiler.jar (also contained in the rml folder).
 
 For instance, to generate test.pl, we can do as follows:
-
 ```bash
 $ cd ~/catkin-ws/src/beginner_tutorials/ROSMonitoring/monitor/rml/
 $ java -jar rml-compiler.jar --input test.rml --output test.pl
