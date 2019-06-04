@@ -32,8 +32,21 @@ The other folder contains example of specifications using RML.
 
 # How to use ROSMonitoring (through an example extracted by ROS Tutorial)
 
-In order to show how to use ROSMonitoring, the fisrt thing we need to do is to create a ROS project.
-We can get the example of ROS nodes in Python from:
+First things first..
+Before going on we need a machine with ROS installed. It is not important which ROS distribution, as long as rospy is supported.
+
+In the following we are going to use ROS Melodic, but as mentioned before, you can use another distribution.
+
+## Install ROS Melodic
+http://wiki.ros.org/melodic/Installation
+
+## Create ROS package
+http://wiki.ros.org/ROS/Tutorials/CreatingPackage
+We need the 'beginner_tutorials' package, so do not forget to create it!
+
+
+ 
+
 
 
 
