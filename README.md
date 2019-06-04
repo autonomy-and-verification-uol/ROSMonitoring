@@ -1,3 +1,29 @@
+# Prerequisities
+
+# Python:
+
+## pip (https://pypi.org/project/pip/)
+```bash
+$ sudo apt install pip
+```
+Using pip we can then install the websocket library.
+```bash
+$ pip install websocket
+```
+# Prolog (http://www.swi-prolog.org/build/PPA.html):
+```bash
+$ sudo apt-get install software-properties-common
+$ sudo apt-add-repository ppa:swi-prolog/stable
+$ sudo apt-get update
+$ sudo apt-get install swi-prolog
+```
+
+## Java (https://openjdk.java.net/install/):
+For instance, installing openjdk 9:
+```bash
+$ sudo apt install openjdk-9-jre-headless
+```
+
 # ROSMonitoring
 Repository containing the Python implementation for integrating RML (Runtime Monitoring Language, https://github.com/RMLatDIBRIS) verification and ROS (https://www.ros.org/).
 
@@ -84,25 +110,6 @@ In the terminal:
 ```
 Now you should have your local ROSMonitoring folder.
 
-### Monitor prerequisites
-
-#### Python:
-
-pip (https://pypi.org/project/pip/)
-```bash
-$ sudo apt install pip
-```
-Using pip we can then install the websocket library.
-```bash
-$ pip install websocket
-```
-### Prolog:
-```bash
-$ sudo apt-get install software-properties-common
-$ sudo apt-add-repository ppa:swi-prolog/stable
-$ sudo apt-get update
-$ sudo apt-get install swi-prolog
-```
 ### Instrument talker and listener nodes
 
 The first thing to do in order to monitor our nodes is to instrument them. Thanks to this step, our monitor will be able to intercept the topics of our interest (even though for now we have only the 'chatter' topic).
