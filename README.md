@@ -459,7 +459,7 @@ We should now notice that the count events are not propagated to the listener no
 [INFO] [1559638173.004578]: /listener_27375_1559638153394I heard 102
 ...
 ```
-
+The Online monitor always generates the log file (as the Offline monitor). The big difference is that for each event saved inside the log file, we already add the information about the presence of an error or not (simply adding the 'error':True key-value into the traces). 
 
 
 
