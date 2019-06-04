@@ -1,14 +1,12 @@
 # Prerequisities
 
-# Python:
-
-## pip (https://pypi.org/project/pip/)
+# Pip (https://pypi.org/project/pip/)
 ```bash
 $ sudo apt install pip
 ```
 Using pip we can then install the websocket library.
 ```bash
-$ pip install websocket
+$ pip install websocket_client
 ```
 # Prolog (http://www.swi-prolog.org/build/PPA.html):
 ```bash
@@ -303,6 +301,12 @@ As for the Offline case, also here we have different parameters for customize th
  - log, the monitor logs everything (also the errors)
  - filter, the monitor propagates only the events which are consistent with the specification
  
-
-
+If we try to run our monitor again as before, it will raise an error.
+```bash
+$ cd ~/catkin_ws/
+$ rosrun beginner_tutorials monitor.py
+[INFO] [1559657476.706400]: monitor started and ready: Online
+[INFO] [1559657476.707265]: [Errno 111] Connection refused
+[INFO] [1559657476.707966]: ### websocket closed ###
+```
 
