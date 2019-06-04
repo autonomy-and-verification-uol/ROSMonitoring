@@ -210,8 +210,14 @@ The monitor should print on the terminal something like this:
 Since we have selected Offline RV, the monitor is only logging the events.
 We can find the automatically generated log file (log.txt) inside ~/catkin_ws folder.
 
+The log file should look like this:
 
-
+```json
+{"topic": "chatter", "data": "hello", "time": 1559638159.43485}
+{"topic": "chatter", "data": "hello", "time": 1559638159.534461}
+{"topic": "chatter", "data": "hello", "time": 1559638159.635648}
+...
+```
 
  
  
