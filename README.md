@@ -252,7 +252,8 @@ To do this, first we copy the log file into the prolog folder, and then we run t
 ```bash
 $ cp ~/catkin_ws/log.txt ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/
 $ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/prolog/
-$ 
+$ sh offline_monitor.sh ../rml/test.pl ../log.txt
+
 ```
  
  
