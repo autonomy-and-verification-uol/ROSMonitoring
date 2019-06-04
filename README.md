@@ -219,10 +219,10 @@ This time they will be able to communicate.
 
 The monitor should print on the terminal something like this:
 ```bash
-[INFO] [1559638171.740409]: /listener_27375_1559638153394I heard hello world 1559638171.74
-[INFO] [1559638171.840524]: /listener_27375_1559638153394I heard hello world 1559638171.84
-[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello world 1559638171.94
-[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello world 1559638172.04
+[INFO] [1559638171.740409]: /listener_27375_1559638153394I heard hello 
+[INFO] [1559638171.840524]: /listener_27375_1559638153394I heard hello 
+[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello 
+[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello 
 ```
 
 Since we have selected Offline RV, the monitor is only logging the events.
