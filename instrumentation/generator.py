@@ -4,7 +4,7 @@ import yaml
 def instrument_files(path, topics = None): # function which instruments all the python file in the path
     files = []
     topics_with_types = []
-    for r, d, f in os.walk(path):
+    for r, d, f in os.walk(os.path.expanduser(path), followlinks = True):
         for file in f: # for all the python files
             if '.py' in file and 'instrumented' not in file: # excluding the instrumented ones
                 update_topics(os.path.join(r, file), topics_with_types, topics) # instrument the files generating for each one the corresponding '_instrumented' one
