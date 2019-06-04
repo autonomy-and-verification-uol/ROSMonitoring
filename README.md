@@ -328,4 +328,14 @@ For built-in help, use ?- help(Topic). or ?- apropos(Word).
 The Webserver is now ready and running.
 
 The execution of the monitor is the same as for the Offline case, but we can see that each time the ROS monitor observes an event, instead of logging it, it first sends it to the Webserver Prolog in order to check the event against the RML specification.
+Also in the terminal where we are executing monitor.py we can notice different log information with respect to the Offline version.
+```bash
+$ rosrun beginner_tutorials monitor.py 
+...
+[INFO] [1559658087.038097]: monitor has observed: hello
+[INFO] [1559658087.136548]: event propagated to webserver prolog
+The event {"data":"hello", "topic":"chatter"} is consistent and republished
+...
+```
+In the piece of output showed above we can see how the monitor, first intercepts an event, then it propagates the event to the webserver, and finally upon the reception from the webserver saying the the event is consistent, it logs this information.
 
