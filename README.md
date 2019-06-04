@@ -18,7 +18,7 @@ $ sudo apt-get update
 $ sudo apt-get install swi-prolog
 ```
 
-## Java (https://openjdk.java.net/install/):
+# Java (https://openjdk.java.net/install/):
 For instance, installing openjdk 11 would be:
 ```bash
 $ sudo add-apt-repository ppa:openjdk-r/ppa
