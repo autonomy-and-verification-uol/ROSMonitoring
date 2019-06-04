@@ -66,7 +66,8 @@ Now we are ready to start monitoring our talker and listener nodes!
 
 We need the ROSMonitoring implementation in order to instrument and verify our nodes. So, now is the time to clone the repository, if you have not already.
 
-
+In the terminal:
+ git clone https://github.com/autonomy-and-verification-uol/ROSMonitoring.git
 
 
 
