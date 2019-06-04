@@ -49,7 +49,7 @@ We need the 'beginner_tutorials' package, so do not forget to create it!
 
 ## Writing simple Publisher and Subscriber using rospy
 http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28python%29
- 
+At the end of this tutorial you should have the talker and listener node working.
 
 
 
