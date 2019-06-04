@@ -103,7 +103,7 @@ $ ./generator
 {'path': '~/catkin_ws/src/beginner_tutorials/scripts/', 'topics': 'all'}
 ('chatter', ('String', 'from std_msgs.msg import String'), 'queue_size=10')
 
-
+If we go back to the parent folder, we should now find a new folder called ROSMonitor. Inside this folder, two new files have been automatically generated: monitor.py and monitor.yaml
 
 
 
