@@ -163,7 +163,7 @@ Even though this can seem as a worthless modification, it allows us to put a mon
 In fact, the instrumented talker publishes on a different topic now ('chatter_mon'), while the listener (which in this specific case is totally unchanged since it does not publish anything) listens on the old one ('chatter'). If we run the two instrumented nodes as we did before with the normal ones, we would observe that the two nodes are not able to communicate anymore. Because the talker publishes a topic that is not subscribed by the listener. 
 
 Remember: roscore must be running on another terminal..
-```
+```bash
 $ cd ~/catkin_ws/src/beginner_tutorials/scripts/
 $ chmod +x talker_instrumented.py
 $ chmod +x listener_instrumented.py
