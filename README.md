@@ -3,7 +3,7 @@ Repository containing the Python implementation for integrating RML (Runtime Mon
 
 This repository contains two folders:
  - instrumentation
- - webserver
+ - monitor
 
 # Instrumentation
 
@@ -21,14 +21,12 @@ The 'topics' is the list of topics we are interested in instrumenting (what the 
 The keyword 'all' is used instead of listing all the topics. Using 'all', we do not limit which topics will be 
 instrumented, and we instrument all the topics used in all the Python nodes contained in the ROS project.
 
-# Webserver
+# Monitor
 
-The webserver folder contains two subfolders: prolog and rml
+The monitor folder contains two subfolders: prolog and rml
 
 The Prolog folder contains the prolog files implementing the semantics of the specification language chosen: RML.
-In this folder we can find the semantics of the Trace Expression formalism and the implementation of a Webserver
-prolog. This Webserver Prolog can be used as a bridge between ROS nodes and our specifications. Thanks to the 
-instrumentation part, we can generate automatically a monitor which will communicate to the WebServer Prolog using WebSockets (in the case of Online Runtime Verification).
+In this folder we can find the semantics of the Trace Expression formalism (the lower level calculus obtained compiling RML specifications). Beside the semantics, we have the implementation of a monitor in Prolog, both for Online and Offline RV. The Online RV is achieved through the use of Websockets; the monitor in Prolog consists in a Webserver listening on a chosen url and port. The ROS monitor generated through instrumentation will communicate the observed events at Runtime through this websocket connection. The Offline implementation is simpler, it simply consists in a Prolog implementation where a log file can be analysed offline (after the execution of the ROS system). Also in this case, the events checked by the monitor are obtained by the ROS monitor, which in the Offline scenario logs the observed events inside a log file. The same log file will be later analysed by the prolog monitor.
 
 The other folder contains example of specifications using RML.
 
