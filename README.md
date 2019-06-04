@@ -73,6 +73,8 @@ In the terminal:
 
 ### Instrument talker and listener nodes
 
+The first thing to do in order to monitor our nodes is to instrument them. Thanks to this step, our monitor will be able to intercept the topics of our interest (even though for now we have only the 'chatter' topic).
+
 
 
 
