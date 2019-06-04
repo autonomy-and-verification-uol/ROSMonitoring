@@ -447,6 +447,18 @@ In this way, we are saying to the monitor that we want to filter the wrong event
 
 Let us try again the Online verification (as before)!
 
+We should now notice that the count events are not propagated to the listener node until they reach value 101.
+```bash
+...
+[INFO] [1559638170.561132]: /listener_27375_1559638153394I heard hello
+[INFO] [1559638170.894412]: /listener_27375_1559638153394I heard hello
+[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello 
+[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello 
+[INFO] [1559638172.203479]: /listener_27375_1559638153394I heard 101
+[INFO] [1559638172.608934]: /listener_27375_1559638153394I heard hello
+[INFO] [1559638173.004578]: /listener_27375_1559638153394I heard 102
+...
+```
 
 
 
