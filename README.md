@@ -309,4 +309,23 @@ $ rosrun beginner_tutorials monitor.py
 [INFO] [1559657476.707265]: [Errno 111] Connection refused
 [INFO] [1559657476.707966]: ### websocket closed ###
 ```
+The error is caused by the absence of a Webserver ready on 127.0.0.1:8080.
+
+Thus, before running our Online monitor, we need to execute the Webserver.
+```bash
+$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/prolog/
+$ sh online_monitor.sh ../rml/test.pl
+% Started server at http://127.0.0.1:8080/
+Welcome to SWI-Prolog (threaded, 64 bits, version 8.0.2)
+SWI-Prolog comes with ABSOLUTELY NO WARRANTY. This is free software.
+Please run ?- license. for legal details.
+
+For online help and background, visit http://www.swi-prolog.org
+For built-in help, use ?- help(Topic). or ?- apropos(Word).
+
+?- 
+```
+The Webserver is now ready and running.
+
+The execution of the monitor is the same as for the Offline case, but we can see that each time the ROS monitor observes an event, instead of logging it, it first sends it to the Webserver Prolog in order to check the event against the RML specification.
 
