@@ -339,3 +339,34 @@ The event {"data":"hello", "topic":"chatter"} is consistent and republished
 ```
 In the piece of output showed above we can see how the monitor, first intercepts an event, then it propagates the event to the webserver, and finally upon the reception from the webserver saying the the event is consistent, it logs this information.
 
+### Using the filter action
+
+The last part of this tutorial will show the use of the monitor for filtering the wrong events.
+
+The specification file test.rml (and its compilation test.pl) are already prepared for being used in a slightly more complex example.
+
+In order to filter wrong events, we need nodes generating wrong events first.
+
+Let us change the talker.py file.
+```python
+import rospy
+from std_msgs.msg import String
+from std_msgs.msg import Int32
+
+def talker():
+    pub = rospy.Publisher('chatter', String, queue_size=10)
+    pub_c = rospy.Publisher('count', Int32, queue_size=10)
+    rospy.init_node('talker', anonymous=True)
+    rate = rospy.Rate(10) # 10hz
+    count = 0
+    while not rospy.is_shutdown():
+        hello_str = "hello"# %s" % rospy.get_time()
+        rospy.loginfo(hello_str)
+        pub.publish(hello_str)
+        rospy.loginfo('count ' + str(count))
+        pub_c.publish(count)
+        count += 1
+        rate.sleep()
+...
+```
+
