@@ -279,6 +279,26 @@ More information about RML can be found at: https://rmlatdibris.github.io/
 ### Adding the monitor in the middle (Online version).
 
 Before we used our monitor only for logging purposes. But, the real power of our monitor lies in being the bridge among ROS nodes communications.
+Instead of generating only a log file, we can check the events generated inside ROS dynamically.
 
+In order to execute the Online version, we need to do two things first.
+
+We have to update the monitor.yaml configuration file, and we have to run the Webserver Prolog in order to check the specification against the events observed by monitor.py.
+
+The modification of monitor.yaml can be done very easily, just swapping the comments.
+```yaml
+# monitor: # offline RV
+#  log: ./log.txt # file where the monitor will log the observed events
+#  when: offline # when the RV will be applied
+
+monitor: # online RV
+   action: log # default action (optional) # the other possible value is: filter
+   log: ./log.txt # file where the monitor will log the observed events
+   webserver: # the webserver running and ready to check the specification
+     port: 8080 # the port where it is listening
+     url: 127.0.0.1 # the url where it is listening
+   when: online # when the RV will be applied
+```
+As for the Offline case, also here we have different parameters for customize the RV process. More specifically, we need to inform the ROS monitor about the Webserver Prolog. So, we have to specify where it will be listening (url) and on which port (8080). A new parameter available only for the Online version is 'action'. Thanks to this argument, we can choose what the monitor can do when an error is observed (i.e. an event inconsistent with our specification).
 
 
