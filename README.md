@@ -104,6 +104,29 @@ $ ./generator
 ('chatter', ('String', 'from std_msgs.msg import String'), 'queue_size=10')
 
 If we go back to the parent folder, we should now find a new folder called ROSMonitor. Inside this folder, two new files have been automatically generated: monitor.py and monitor.yaml
+ - monitor.py is the Python definition of the monitor for ROS; its objective is to intercept the topics and log them (for Offline RV) or propagate them to the Webserver Prolog.
+ - monitor.yaml is the configuration file for the monitor node.
+ 
+Before going on, let us have a look at monitor.yaml
+ 
+```yaml
+monitor: # offline RV
+ log: ./log.txt # file where the monitor will log the observed events
+ when: offline # when the RV will be applied
+
+# monitor: # online RV
+#   action: log # default action (optional) # the other possible value is: filter
+#   log: ./log.txt # file where the monitor will log the observed events
+#   webserver: # the webserver running and ready to check the specification
+#     port: 8080 # the port where it is listening
+#     url: 127.0.0.1 # the url where it is listening
+#   when: online # when the RV will be applied
+```
+ 
+The default configuration file for the monitor is set for Offline RV. In the commented part we have a possible use for the Online version. 
+ 
+ 
+ 
 
 
 
