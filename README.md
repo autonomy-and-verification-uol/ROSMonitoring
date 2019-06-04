@@ -274,8 +274,11 @@ $ cd ~/catkin-ws/src/beginner_tutorials/ROSMonitoring/monitor/rml/
 $ java -jar rml-compiler.jar --input test.rml --output test.pl
 ```
 The compiler will automatically compile the rml file into the equivalent prolog one, which can be used directly from the Prolog monitor.
+More information about RML can be found at: https://rmlatdibris.github.io/
 
+### Adding the monitor in the middle (Online version).
 
+Before we used our monitor only for logging purposes. But, the real power of our monitor lies in being the bridge among ROS nodes communications.
 
 
 
