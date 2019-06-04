@@ -66,9 +66,9 @@ def update_topics(file, topics_with_types, topics = None): # instrument the topi
         fout.write(content) # update the instrumented file
 
 def create_monitor(topics_with_types, path): # function which creates the python monitor
-    if not os.path.exists('../monitor'):
-        os.mkdir('../monitor')
-    with open('../monitor/monitor.py', 'w') as monitor: # the monitor code will be in monitor.py
+    if not os.path.exists('../ROSMonitor'):
+        os.mkdir('../ROSMonitor')
+    with open('../ROSMonitor/monitor.py', 'w') as monitor: # the monitor code will be in monitor.py
     # write the imports the monitor is gonna need
         imports = '''#!/usr/bin/env python
 import rospy
@@ -218,7 +218,7 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-        '''.format(yaml_file =  os.path.abspath('../monitor/monitor.yaml'),ros_project = path, topics = [topic for (topic, _, _) in topics_with_types])
+        '''.format(yaml_file =  os.path.abspath('../ROSMonitor/monitor.yaml'),ros_project = path, topics = [topic for (topic, _, _) in topics_with_types])
         monitor.write(imports + msg_type_imports + pub_with_callbacks + pub_dict + monitor_def + other_callbacks)
 
 def create_monitor_config(): # function which creates the YAML config file whoch will be used by the monitor
@@ -235,7 +235,7 @@ monitor: # online RV
     url: 127.0.0.1 # the url where it is listening
   when: online # when the RV will be applied
   '''
-    with open('../monitor/monitor.yaml', 'w') as yaml_file:
+    with open('../ROSMonitor/monitor.yaml', 'w') as yaml_file:
         yaml_file.write(str)
     #     yaml.dump(offline_config, yaml_file, default_flow_style=False)
     # with open('online.yaml', 'w') as yaml_file:
