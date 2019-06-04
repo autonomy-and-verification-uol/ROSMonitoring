@@ -86,14 +86,14 @@ We need to change <path_to_ROS_project> into ~/catkin_ws/src/beginner_tutorials
 We can leave topics as it is. Note that in this case we could remove the keyword all, and add chatter, without changing the final outcome.
 
 The new config.yaml file should look like this:
-'''yaml
+```yaml
 #config file for the instrumentation of ROS
 #this file is given in input to generator.py
 
 ROS:
   path: ~/catkin_ws/src/beginner_tutorials/
   topics: all
-'''
+```
  
 
 
