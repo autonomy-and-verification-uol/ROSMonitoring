@@ -123,7 +123,11 @@ monitor: # offline RV
 #   when: online # when the RV will be applied
 ```
  
-The default configuration file for the monitor is set for Offline RV. In the commented part we have a possible use for the Online version. 
+The default configuration file for the monitor is set for Offline RV. In the commented part we have a possible use for the Online version. The YAML syntax is very intuitive, focusing for now on the Offline parameters, we can set where the events observed by the monitor will be saved (default here is log.txt), and at which time the RV will be applied (in this case Offline, setting the corresponding 'when' item).
+
+Let us try the Offline approach first.
+
+
  
  
  
