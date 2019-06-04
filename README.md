@@ -1,5 +1,7 @@
 # Prerequisities
 
+ROSMonitoring works only for ROS distributions >=Indigo (i.e. where rospy is supported).
+
 # Pip (https://pypi.org/project/pip/)
 ```bash
 $ sudo apt install pip
