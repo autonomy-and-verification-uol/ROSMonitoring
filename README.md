@@ -95,7 +95,13 @@ ROS:
   topics: all
 ```
 
+Now we are ready to execute the generator.
 
+$ chmod +x generator
+$ ./generator
+$ ./generator
+{'path': '~/catkin_ws/src/beginner_tutorials/scripts/', 'topics': 'all'}
+('chatter', ('String', 'from std_msgs.msg import String'), 'queue_size=10')
 
 
 
