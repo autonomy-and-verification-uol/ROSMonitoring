@@ -190,6 +190,7 @@ $ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/ROSMonitor/
 $ chmod +x monitor.py
 $ cd ~/catkin_ws/
 $ rosrun beginner_tutorials monitor.py
+[INFO] [1559652181.670203]: monitor started and ready: Offline
 
 
 
