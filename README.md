@@ -75,7 +75,9 @@ In the terminal:
 ```
 Now you should have your local ROSMonitoring folder.
 
-### Python prerequisites
+### Monitor prerequisites
+
+#### Python:
 
 pip (https://pypi.org/project/pip/)
 ```bash
@@ -84,6 +86,13 @@ $ sudo apt install pip
 Using pip we can then install the websocket library.
 ```bash
 $ pip install websocket
+```
+### Prolog:
+```bash
+$ sudo apt-get install software-properties-common
+$ sudo apt-add-repository ppa:swi-prolog/stable
+$ sudo apt-get update
+$ sudo apt-get install swi-prolog
 ```
 ### Instrument talker and listener nodes
 
@@ -219,6 +228,13 @@ The log file should look like this:
 ...
 ```
 
+The last step for the Offline version is to check the log file against a formal specification.
+To do this, first we copy the log file into the prolog folder, and then we run the monitor (using the already given sh file).
+
+```bash
+$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/prolog/
+$ 
+```
  
  
  
