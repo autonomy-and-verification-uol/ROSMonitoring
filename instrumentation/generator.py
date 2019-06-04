@@ -76,7 +76,6 @@ import sys
 import json
 import yaml
 import websocket
-import csv
         '''
     # write the imports for the msg types used by the monitor (extracted by the previous instrumentation)
         msg_type_imports = ''
@@ -95,7 +94,7 @@ def callback{tp}(data):
         ws.send(json.dumps({{'topic' : '{tp}', 'data': data.data}}))
         rospy.loginfo('event propagated to webserver prolog')
     else:
-        logging([rospy.get_time(), '{tp}', data.data])
+        logging({{ 'time' : rospy.get_time(), 'topic' : '{tp}', 'data' : data.data }})
         pub_dict['{tp}'].publish(data.data)
             '''.format(tp = topic, ty = type, qs = queue_size)
     # write the dictionary for dynamically keeping track of the publishers
@@ -117,13 +116,8 @@ pub_dict = {'''
     # to the usual Subscribers
         monitor_def = '''
 def monitor():
-    global online
-    if online:
-        header = ['Time', 'Topic', 'Data', 'Error']
-    else:
-        header = ['Time', 'Topic', 'Data']
-    with open(log, 'w') as csv_file:
-        csv.writer(csv_file).writerow(header)
+    with open(log, 'w') as log_file:
+        log_file.write('')
     rospy.init_node('monitor', anonymous=True)'''
         for (topic, (type, _), _) in topics_with_types:
             monitor_def += '''
@@ -141,7 +135,7 @@ def on_message(ws, message):
     global error, log, action
     jsonMsg = json.loads(message)
     if 'error' in jsonMsg:
-        logging([rospy.get_time(), jsonMsg['msg']['topic'], jsonMsg['msg']['data'], 'error'])
+        logging({{ 'time' : rospy.get_time(), 'topic' : jsonMsg['msg']['topic'], 'data' : jsonMsg['msg']['data'], 'error' : True }})
         print('The event ' + message + ' is inconsistent..')
         if action == 'filter':
             print('Not republished..')
@@ -150,14 +144,14 @@ def on_message(ws, message):
             pub_dict[jsonMsg['msg']['topic']].publish(jsonMsg['msg']['data'])
     	error = True
     else:
-        logging([rospy.get_time(), jsonMsg['topic'], jsonMsg['data']])
+        logging({{ 'time' : rospy.get_time(), 'topic' :  jsonMsg['topic'], 'data' : jsonMsg['data'] }})
     	print('The event ' + message + ' is consistent and republished')
     	pub_dict[jsonMsg['topic']].publish(jsonMsg['data'])
 
-def logging(row):
+def logging(json_event):
     try:
-        with open(log, 'a+') as csv_file:
-            csv.writer(csv_file).writerow(row)
+        with open(log, 'a+') as log_file:
+            log_file.write(json.dumps(json_event) + '\\n')
         rospy.loginfo('event logged')
     except:
         rospy.loginfo('Unable to log the event.')
@@ -181,7 +175,7 @@ def main(argv):
                     if 'log' in config['monitor']:
                         log = config['monitor']['log']
                     else:
-                        log = './log.csv'
+                        log = './log.txt'
                     if config['monitor']['when'] == 'offline': #offline RV
                         online = False
                         monitor()
@@ -223,17 +217,17 @@ if __name__ == '__main__':
 
 def create_monitor_config(): # function which creates the YAML config file whoch will be used by the monitor
     str = '''
-# monitor: # offline RV
-#   log: ./log.csv # file where the monitor will log the observed events
-#   when: offline # when the RV will be applied
+monitor: # offline RV
+  log: ./log.txt # file where the monitor will log the observed events
+  when: offline # when the RV will be applied
 
-monitor: # online RV
-  action: log # default action (optional) # the other possible value is: filter
-  log: ./log.csv # file where the monitor will log the observed events
-  webserver: # the webserver running and ready to check the specification
-    port: 8080 # the port where it is listening
-    url: 127.0.0.1 # the url where it is listening
-  when: online # when the RV will be applied
+# monitor: # online RV
+#   action: log # default action (optional) # the other possible value is: filter
+#   log: ./log.txt # file where the monitor will log the observed events
+#   webserver: # the webserver running and ready to check the specification
+#     port: 8080 # the port where it is listening
+#     url: 127.0.0.1 # the url where it is listening
+#   when: online # when the RV will be applied
   '''
     with open('../ROSMonitor/monitor.yaml', 'w') as yaml_file:
         yaml_file.write(str)
