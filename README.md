@@ -38,18 +38,27 @@ Before going on we need a machine with ROS installed. It is not important which 
 In the following we are going to use ROS Melodic with Catkin, but as mentioned before, you can use another distribution.
 
 ## Install ROS Kinetic
+
 http://wiki.ros.org/melodic/Installation
 
 ## Create a workspace for catkin
+
 http://wiki.ros.org/catkin/Tutorials/create_a_workspace
 
 ## Create ROS package
+
 http://wiki.ros.org/ROS/Tutorials/CreatingPackage
 We need the 'beginner_tutorials' package, so do not forget to create it!
 
 ## Writing simple Publisher and Subscriber using rospy
+
 http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28python%29
+
 At the end of this tutorial you should have the talker and listener node working.
+To run the example, follow the instructions at:
+http://wiki.ros.org/ROS/Tutorials/ExaminingPublisherSubscriber
+
+Now we are ready to start monitoring our talker and listener nodes!
 
 
 
