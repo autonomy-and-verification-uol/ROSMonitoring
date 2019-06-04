@@ -172,6 +172,13 @@ The talker should print the topics on the terminal as before. But, the listener 
 
 In order to re-establish the communication between our nodes, we have to execute the monitor which has been created by the generator program.
 
+On a different terminal:
+
+$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/ROSMonitor/
+$ chmod +x monitor.py
+$ cd ~/catkin_ws/
+$ rosrun beginner_tutorials monitor.py
+
 
 
 
