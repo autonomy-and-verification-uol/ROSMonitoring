@@ -91,7 +91,7 @@ The new config.yaml file should look like this:
 #this file is given in input to generator.py
 
 ROS:
-  path: /home//catkin_ws/src/beginner_tutorials/scripts/
+  path: ~/catkin_ws/src/beginner_tutorials/scripts/
   topics: all
 ```
 
