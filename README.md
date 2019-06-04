@@ -299,6 +299,10 @@ monitor: # online RV
      url: 127.0.0.1 # the url where it is listening
    when: online # when the RV will be applied
 ```
-As for the Offline case, also here we have different parameters for customize the RV process. More specifically, we need to inform the ROS monitor about the Webserver Prolog. So, we have to specify where it will be listening (url) and on which port (8080). A new parameter available only for the Online version is 'action'. Thanks to this argument, we can choose what the monitor can do when an error is observed (i.e. an event inconsistent with our specification).
+As for the Offline case, also here we have different parameters for customize the RV process. More specifically, we need to inform the ROS monitor about the Webserver Prolog. So, we have to specify where it will be listening (url) and on which port (8080). A new parameter available only for the Online version is 'action'. Thanks to this argument, we can choose what the monitor can do when an error is observed (i.e. an event inconsistent with our specification). The possible values for now are: log and filter.
+ - log, the monitor logs everything (also the errors)
+ - filter, the monitor propagates only the events which are consistent with the specification
+ 
+
 
 
