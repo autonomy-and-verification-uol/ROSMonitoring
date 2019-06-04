@@ -192,9 +192,21 @@ $ chmod +x monitor.py
 $ cd ~/catkin_ws/
 $ rosrun beginner_tutorials monitor.py
 [INFO] [1559652181.670203]: monitor started and ready: Offline
-
 ```
 
+The monitor is now ready to intercept the messages.
+
+Let us execute again the instrumented nodes (talker_instrumented.py and listener_instrumented.py) as we did before.
+This time they will be able to communicate.
+
+The monitor should print on the terminal something like this:
+```bash
+[INFO] [1559638171.740409]: /listener_27375_1559638153394I heard hello world 1559638171.74
+[INFO] [1559638171.840524]: /listener_27375_1559638153394I heard hello world 1559638171.84
+[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello world 1559638171.94
+[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello world 1559638172.04
+
+```
 
 
 
