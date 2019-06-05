@@ -25,6 +25,8 @@ def main(argv):
                     if config['ROS']['topics'] == 'all': # all is used when all the topics has to be checked
                         create_monitor(instrument_files(config['ROS']['path']), config['ROS']['path'])
                     else: # only a list of topics has to be checked
+                        if not isinstance(config['ROS']['topics'], list):
+                            config['ROS']['topics'] = [config['ROS']['topics']]
                         create_monitor(instrument_files(config['ROS']['path'], config['ROS']['topics']), config['ROS']['path'])
                     create_monitor_config() # create the YAML configuration file which will be used by the monitor
                 else: # the YAML file is not valid
