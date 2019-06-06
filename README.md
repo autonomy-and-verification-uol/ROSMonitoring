@@ -2,7 +2,7 @@ Repository containing the Python implementation for integrating RML (Runtime Mon
 
 # Prerequisities
 
-ROSMonitoring works only for ROS distributions >=Indigo (i.e. where rospy is supported).
+ROSMonitoring works only for ROS distributions >=Electric Emys (i.e. since rospy has been supported).
 
 # Pip (https://pypi.org/project/pip/)
 ```bash
