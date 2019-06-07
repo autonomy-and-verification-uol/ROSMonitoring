@@ -32,7 +32,7 @@ $ sudo apt-get install openjdk-11-jdk
 
 This repository contains two folders:
  - instrumentation
- - monitor
+ - oracle
 
 # Instrumentation
 
@@ -47,12 +47,12 @@ ROS:
 ```
 The 'path' item refers to the path to the ROS project we want to instrument.
 The 'topics' is the list of topics we are interested in instrumenting (what the monitor will check at runtime).
-The keyword 'all' is used instead of listing all the topics. Using 'all', we do not limit which topics will be 
+The keyword 'all' is used instead of listing all the topics. Using 'all', we do not limit which topics will be
 instrumented, and we instrument all the topics used in all the Python nodes contained in the ROS project.
 
-# Monitor
+# Oracle
 
-The monitor folder contains two subfolders: prolog and rml
+The oracle folder contains two subfolders: prolog and rml
 
 The Prolog folder contains the prolog files implementing the semantics of the specification language chosen: RML.
 In this folder we can find the semantics of the Trace Expression formalism (the lower level calculus obtained compiling RML specifications). Beside the semantics, we have the implementation of a monitor in Prolog, both for Online and Offline RV. The Online RV is achieved through the use of Websockets; the monitor in Prolog consists in a Webserver listening on a chosen url and port. The ROS monitor generated through instrumentation will communicate the observed events at Runtime through this websocket connection. The Offline implementation is simpler, it simply consists in a Prolog implementation where a log file can be analysed offline (after the execution of the ROS system). Also in this case, the events checked by the monitor are obtained by the ROS monitor, which in the Offline scenario logs the observed events inside a log file. The same log file will be later analysed by the prolog monitor.
@@ -64,9 +64,9 @@ The other folder contains example of specifications using RML.
 First things first..
 Before going on we need a machine with ROS installed. It is not important which ROS distribution, as long as rospy is supported.
 
-In the following we are going to use ROS Melodic with Catkin, but as mentioned before, you can use another distribution.
+In the following we are going to use ROS Melodic with Catkin on Ubuntu 18.04, but as mentioned before, you can use any distribution starting from Electric Emys.
 
-## Install ROS Kinetic
+## Install ROS Melodic
 
 http://wiki.ros.org/melodic/Installation
 
@@ -89,7 +89,7 @@ To run the example, follow the instructions at:
 
 http://wiki.ros.org/ROS/Tutorials/ExaminingPublisherSubscriber
 
-At the end of the tutorial, the talker and listener nodes should be able to communicate freely. 
+At the end of the tutorial, the talker and listener nodes should be able to communicate freely.
 
 In order to simplify the monitoring process and make it easier, we need to change a small thing inside talker.py.
 
@@ -145,7 +145,7 @@ $ ./generator
 If we go back to the parent folder, we should now find a new folder called ROSMonitor. Inside this folder, two new files have been automatically generated: monitor.py and monitor.yaml
  - monitor.py is the Python definition of the monitor for ROS; its objective is to intercept the topics and log them (for Offline RV) or propagate them to the Webserver Prolog.
  - monitor.yaml is the configuration file for the monitor node.
- 
+
 Before going on, let us have a look at monitor.yaml
 ```yaml
 monitor: # offline RV
@@ -160,7 +160,7 @@ monitor: # offline RV
 #     url: 127.0.0.1 # the url where it is listening
 #   when: online # when the RV will be applied
 ```
- 
+
 The default configuration file for the monitor is set for Offline RV. In the commented part we have a possible use for the Online version. The YAML syntax is very intuitive, focusing for now on the Offline parameters, we can set where the events observed by the monitor will be saved (default here is log.txt), and at which time the RV will be applied (in this case Offline, setting the corresponding 'when' item).
 
 The generator has not created the ROSMonitor folder, but it has also instrumented our nodes.
@@ -188,7 +188,7 @@ pub = rospy.Publisher('chatter_mon', String, queue_size=10)
 ```
 
 Even though this can seem as a worthless modification, it allows us to put a monitor in the middle of the communication.
-In fact, the instrumented talker publishes on a different topic now ('chatter_mon'), while the listener (which in this specific case is totally unchanged since it does not publish anything) listens on the old one ('chatter'). If we run the two instrumented nodes as we did before with the normal ones, we would observe that the two nodes are not able to communicate anymore. Because the talker publishes a topic that is not subscribed by the listener. 
+In fact, the instrumented talker publishes on a different topic now ('chatter_mon'), while the listener (which in this specific case is totally unchanged since it does not publish anything) listens on the old one ('chatter'). If we run the two instrumented nodes as we did before with the normal ones, we would observe that the two nodes are not able to communicate anymore. Because the talker publishes a topic that is not subscribed by the listener.
 
 Remember: roscore must be running on another terminal..
 ```bash
@@ -228,10 +228,10 @@ This time they will be able to communicate.
 
 The monitor should print on the terminal something like this:
 ```bash
-[INFO] [1559638171.740409]: /listener_27375_1559638153394I heard hello 
-[INFO] [1559638171.840524]: /listener_27375_1559638153394I heard hello 
-[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello 
-[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello 
+[INFO] [1559638171.740409]: /listener_27375_1559638153394I heard hello
+[INFO] [1559638171.840524]: /listener_27375_1559638153394I heard hello
+[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello
+[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello
 ```
 
 Since we have selected Offline RV, the monitor is only logging the events.
@@ -248,8 +248,8 @@ The log file should look like this:
 The last step for the Offline version is to check the log file against a formal specification.
 To do this, first we copy the log file into the prolog folder, and then we run the monitor (using the already given sh file).
 ```bash
-$ cp ~/catkin_ws/log.txt ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/
-$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/prolog/
+$ cp ~/catkin_ws/log.txt ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/oracle/
+$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/oracle/prolog/
 $ sh offline_monitor.sh ../rml/test.pl ../log.txt
 ...
 matched event #89
@@ -262,12 +262,12 @@ Execution terminated correctly
 offline_monitor.sh expects two arguments:
  - the specification we want to verify (test.pl in this example)
  - the log file containing the traces generated by the ROS monitor (log.txt in this case)
- 
+
 The test.pl is the lower level representation of test.rml (contained in the same folder). If we want to verify new properties, we only need to write them followin the RML syntax (creating a corresponding .rml file). And then, we can compile the new rml specifications using the rml-compiler.jar (also contained in the rml folder).
 
 For instance, to generate test.pl, we can do as follows:
 ```bash
-$ cd ~/catkin-ws/src/beginner_tutorials/ROSMonitoring/monitor/rml/
+$ cd ~/catkin-ws/src/beginner_tutorials/ROSMonitoring/oracle/rml/
 $ java -jar rml-compiler.jar --input test.rml --output test.pl
 ```
 The compiler will automatically compile the rml file into the equivalent prolog one, which can be used directly from the Prolog monitor.
@@ -299,7 +299,7 @@ monitor: # online RV
 As for the Offline case, also here we have different parameters for customize the RV process. More specifically, we need to inform the ROS monitor about the Webserver Prolog. So, we have to specify where it will be listening (url) and on which port (8080). A new parameter available only for the Online version is 'action'. Thanks to this argument, we can choose what the monitor can do when an error is observed (i.e. an event inconsistent with our specification). The possible values for now are: log and filter.
  - log, the monitor logs everything (also the errors)
  - filter, the monitor propagates only the events which are consistent with the specification
- 
+
 If we try to run our monitor again as before, it will raise an error.
 ```bash
 $ cd ~/catkin_ws/
@@ -312,7 +312,7 @@ The error is caused by the absence of a Webserver ready on 127.0.0.1:8080.
 
 Thus, before running our Online monitor, we need to execute the Webserver.
 ```bash
-$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/monitor/prolog/
+$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/oracle/prolog/
 $ sh online_monitor.sh ../rml/test.pl
 % Started server at http://127.0.0.1:8080/
 Welcome to SWI-Prolog (threaded, 64 bits, version 8.0.2)
@@ -322,14 +322,14 @@ Please run ?- license. for legal details.
 For online help and background, visit http://www.swi-prolog.org
 For built-in help, use ?- help(Topic). or ?- apropos(Word).
 
-?- 
+?-
 ```
 The Webserver is now ready and running.
 
 The execution of the monitor is the same as for the Offline case, but we can see that each time the ROS monitor observes an event, instead of logging it, it first sends it to the Webserver Prolog in order to check the event against the RML specification.
 Also in the terminal where we are executing monitor.py we can notice different log information with respect to the Offline version.
 ```bash
-$ rosrun beginner_tutorials monitor.py 
+$ rosrun beginner_tutorials monitor.py
 ...
 [INFO] [1559658087.038097]: monitor has observed: hello
 [INFO] [1559658087.136548]: event propagated to webserver prolog
@@ -366,7 +366,7 @@ def talker():
         pub_c.publish(count)
         count += 1
         rate.sleep()
-        
+
 if __name__ == '__main__':
     try:
         talker()
@@ -451,14 +451,11 @@ We should now notice that the count events are not propagated to the listener no
 ...
 [INFO] [1559638170.561132]: /listener_27375_1559638153394I heard hello
 [INFO] [1559638170.894412]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello 
-[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello 
+[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello
+[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello
 [INFO] [1559638172.203479]: /listener_27375_1559638153394I heard 101
 [INFO] [1559638172.608934]: /listener_27375_1559638153394I heard hello
 [INFO] [1559638173.004578]: /listener_27375_1559638153394I heard 102
 ...
 ```
-The Online monitor always generates the log file (as the Offline monitor). The big difference is that for each event saved inside the log file, we already add the information about the presence of an error or not (simply adding the 'error':True key-value into the traces). 
-
-
-
+The Online monitor always generates the log file (as the Offline monitor). The big difference is that for each event saved inside the log file, we already add the information about the presence of an error or not (simply adding the 'error':True key-value into the traces).
