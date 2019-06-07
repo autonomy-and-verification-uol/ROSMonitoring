@@ -92,7 +92,7 @@ def callback{tp}(data):
     rospy.loginfo('monitor has observed: ' + str(data.data))
     if online:
         ws.send(json.dumps({{'topic' : '{tp}', 'data': data.data}}))
-        rospy.loginfo('event propagated to webserver prolog')
+        rospy.loginfo('event propagated to oracle')
     else:
         logging({{ 'time' : rospy.get_time(), 'topic' : '{tp}', 'data' : data.data }})
         pub_dict['{tp}'].publish(data.data)
@@ -127,7 +127,7 @@ def monitor():
         '''
     # write the auxiliary callbacks functions called by the websocket used by the monitor
     # when a topic is observed by the monitor, if we are doing online RV, it propagates the topic to the
-    # webserver prolog. The webserver prolog checks the event and returns the outcome to the monitor
+    # oracle. The oracle checks the event and returns the outcome to the monitor
     # the monitor then propagates the event to the other nodes (unless we decided to filter the errors,
     # in that case the monitor does not propagate teh event)
         other_callbacks = '''
@@ -182,12 +182,12 @@ def main(argv):
                         rospy.spin()
                     else: # online RV
                         online = True
-                        if 'webserver' in config['monitor'] and 'url' in config['monitor']['webserver']:
-                            url = config['monitor']['webserver']['url']
+                        if 'oracle' in config['monitor'] and 'url' in config['monitor']['oracle']:
+                            url = config['monitor']['oracle']['url']
                         else:
                             url = '127.0.0.1'
-                        if 'webserver' in config['monitor'] and 'port' in config['monitor']['webserver']:
-                            port = config['monitor']['webserver']['port']
+                        if 'oracle' in config['monitor'] and 'port' in config['monitor']['oracle']:
+                            port = config['monitor']['oracle']['port']
                         else:
                             port = '8080'
                         if 'action' in config['monitor']:
@@ -224,7 +224,7 @@ monitor: # offline RV
 # monitor: # online RV
 #   action: log # default action (optional) # the other possible value is: filter
 #   log: ./log.txt # file where the monitor will log the observed events
-#   webserver: # the webserver running and ready to check the specification
+#   oracle: # the oracle running and ready to check the specification
 #     port: 8080 # the port where it is listening
 #     url: 127.0.0.1 # the url where it is listening
 #   when: online # when the RV will be applied
