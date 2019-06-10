@@ -136,16 +136,16 @@ def on_message(ws, message):
     jsonMsg = json.loads(message)
     if 'error' in jsonMsg:
         logging({{ 'time' : rospy.get_time(), 'topic' : jsonMsg['msg']['topic'], 'data' : jsonMsg['msg']['data'], 'error' : True }})
-        print('The event ' + message + ' is inconsistent..')
+        rospy.loginfo('The event ' + message + ' is inconsistent..')
         if action == 'filter':
-            print('Not republished..')
+            rospy.loginfo('Not republished..')
         else:
-            print('Let it go..')
+            rospy.loginfo('Let it go..')
             pub_dict[jsonMsg['msg']['topic']].publish(jsonMsg['msg']['data'])
     	error = True
     else:
         logging({{ 'time' : rospy.get_time(), 'topic' :  jsonMsg['topic'], 'data' : jsonMsg['data'] }})
-    	print('The event ' + message + ' is consistent and republished')
+    	rospy.loginfo('The event ' + message + ' is consistent and republished')
     	pub_dict[jsonMsg['topic']].publish(jsonMsg['data'])
 
 def logging(json_event):
