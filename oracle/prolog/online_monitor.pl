@@ -50,7 +50,7 @@ manage_event(WebSocket) :-
          writeln(E),
 	       nb_getval(state,TE1),
 	       log((TE1,E)),
-	       (next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=E; Reply=_{msg:E, error:true}),
+         (next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=E; Reply=(_{}.put(E).put(_{error:true}))),
 	       atom_json_dict(Json,Reply,[as(string)]),
 	       ws_send(WebSocket, string(Json)),
 	       manage_event(WebSocket)).

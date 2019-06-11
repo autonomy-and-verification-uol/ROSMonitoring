@@ -86,6 +86,8 @@ import sys
 import json
 import yaml
 import websocket
+
+from rospy_message_converter import message_converter
         '''
     # write the imports for the msg types used by the monitor (extracted by the previous instrumentation)
         msg_type_imports = ''
@@ -100,13 +102,16 @@ import websocket
 pub{tp} = rospy.Publisher(name = '{tp}', data_class = {ty}, subscriber_listener = {sbl}, tcp_nodelay = {tcpn}, latch = {la}, headers = {hd}, queue_size = {qs})
 def callback{tp}(data):
     global online, ws
-    rospy.loginfo('monitor has observed: ' + str(data.data))
+    rospy.loginfo('monitor has observed: ' + str(data))
+    dict = message_converter.convert_ros_message_to_dictionary(data)
+    dict['topic'] = '{tp}'
+    dict['time'] = rospy.get_time()
     if online:
-        ws.send(json.dumps({{'topic' : '{tp}', 'data': data.data}}))
+        ws.send(json.dumps(dict))
         rospy.loginfo('event propagated to oracle')
     else:
-        logging({{ 'time' : rospy.get_time(), 'topic' : '{tp}', 'data' : data.data }})
-        pub_dict['{tp}'].publish(data.data)
+        logging(dict)
+        pub_dict['{tp}'].publish(data)
             '''.format(tp = topic, ty = type, sbl = subscriber_listener, tcpn = tcp_nodelay, la = latch, hd = headers, qs = queue_size)
     # write the dictionary for dynamically keeping track of the publishers
         pub_dict = '''
@@ -120,6 +125,22 @@ pub_dict = {'''
             pub_dict += '''
     '{tp}' : pub{tp}'''.format(tp = topic)
         pub_dict += '''
+}
+        '''
+        first_time = True
+    # write the dictionary for dynamically keeping track of the message types (we need it for the message converter)
+        msg_dict = '''
+msg_dict = {'''
+        for (topic, (type, imp), _, _, _, _, _) in topics_with_types:
+            if(first_time):
+                first_time = False
+            else:
+                msg_dict += ', '
+            start = imp.find('from')
+            stop = imp.find('.msg')
+            msg_dict += '''
+    '{tp}' : "{ty}"'''.format(tp = topic, ty = (imp[(start+4):stop].replace(' ', '') + '/' + type))
+        msg_dict += '''
 }
         '''
     # write the definition of the monitor function which will be used to initialize the rosnode, and create the Subscribers for all the instrumented topics.
@@ -144,25 +165,34 @@ def monitor():
         other_callbacks = '''
 def on_message(ws, message):
     global error, log, action
-    jsonMsg = json.loads(message)
-    if 'error' in jsonMsg:
-        logging({{ 'time' : rospy.get_time(), 'topic' : jsonMsg['msg']['topic'], 'data' : jsonMsg['msg']['data'], 'error' : True }})
+    json_dict = json.loads(message)
+    if 'error' in json_dict:
+        logging(json_dict)
         print('The event ' + message + ' is inconsistent..')
         if action == 'filter':
-            print('Not republished..')
+            rospy.loginfo('Not republished..')
         else:
-            print('Let it go..')
-            pub_dict[jsonMsg['msg']['topic']].publish(jsonMsg['msg']['data'])
+            rospy.loginfo('Let it go..')
+            topic = json_dict['topic']
+            del json_dict['topic']
+            del json_dict['time']
+            del json_dict['error']
+            ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
+            pub_dict[topic].publish(ROS_message)
     	error = True
     else:
-        logging({{ 'time' : rospy.get_time(), 'topic' :  jsonMsg['topic'], 'data' : jsonMsg['data'] }})
-    	print('The event ' + message + ' is consistent and republished')
-    	pub_dict[jsonMsg['topic']].publish(jsonMsg['data'])
+        logging(json_dict)
+        topic = json_dict['topic']
+        del json_dict['topic']
+        del json_dict['time']
+    	rospy.loginfo('The event ' + message + ' is consistent and republished')
+        ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
+    	pub_dict[topic].publish(ROS_message)
 
-def logging(json_event):
+def logging(json_dict):
     try:
         with open(log, 'a+') as log_file:
-            log_file.write(json.dumps(json_event) + '\\n')
+            log_file.write(json.dumps(json_dict) + '\\n')
         rospy.loginfo('event logged')
     except:
         rospy.loginfo('Unable to log the event.')
@@ -223,8 +253,8 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-        '''.format(yaml_file =  os.path.abspath('../ROSMonitor/monitor.yaml'),ros_project = path, topics = [topic for (topic, _, _, _, _, _, _) in topics_with_types])
-        monitor.write(imports + msg_type_imports + pub_with_callbacks + pub_dict + monitor_def + other_callbacks)
+        '''.format(yaml_file =  os.path.abspath('../ROSMonitor/monitor.yaml'), ros_project = path, topics = [topic for (topic, _, _, _, _, _, _) in topics_with_types])
+        monitor.write(imports + msg_type_imports + pub_with_callbacks + pub_dict + msg_dict + monitor_def + other_callbacks)
 
 def create_monitor_config(): # function which creates the YAML config file whoch will be used by the monitor
     str = '''
