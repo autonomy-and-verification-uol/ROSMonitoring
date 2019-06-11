@@ -5,7 +5,7 @@ The repository contains the Python implementation for integrating RML (Runtime M
 
 # Prerequisities
 
-ROSMonitoring works only for ROS distributions >=Electric Emys (i.e. since rospy has been supported).
+ROSMonitoring works only for ROS distributions >=Groovy Galapagos.
 
 ## Pip (https://pypi.org/project/pip/)
 ```bash
@@ -68,7 +68,7 @@ The other folder contains example of specifications using RML.
 First things first..
 Before going on we need a machine with ROS installed. It is not important which ROS distribution, as long as rospy is supported.
 
-In the following we are going to use ROS Melodic with Catkin on Ubuntu 18.04, but as mentioned before, you can use any distribution starting from Electric Emys.
+In the following we are going to use ROS Melodic with Catkin on Ubuntu 18.04, but as mentioned before, you can use any distribution starting from Groovy Galapagos.
 
 ## Install ROS Melodic
 
