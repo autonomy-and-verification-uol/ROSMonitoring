@@ -1,3 +1,25 @@
+% MIT License
+%
+% Copyright (c) [2019] [Davide Ancona, Luca Franceschini, Angelo Ferrando, Viviana Mascardi]
+%
+% Permission is hereby granted, free of charge, to any person obtaining a copy
+% of this software and associated documentation files (the "Software"), to deal
+% in the Software without restriction, including without limitation the rights
+% to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+% copies of the Software, and to permit persons to whom the Software is
+% furnished to do so, subject to the following conditions:
+%
+% The above copyright notice and this permission notice shall be included in all
+% copies or substantial portions of the Software.
+%
+% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+% SOFTWARE.
+
 :- module(trace_expressions,[next/3, may_halt/1, is1/1]).
 
 :- use_module(library(coinduction)).
@@ -50,13 +72,13 @@ next(var(Vars, T), E, T3, RetSubs) :-
 %% (permanent) conditional filter
 %% (ET>>T1;T2) = T1/\ET* | T2/\notET*
 %% beware of this: the new symbol for conditional filter is now (_>>_;_)  (old symbol was ?/3)
-%% the new symbol for if-then-else is (_?_;_) (old one was ifelse/3)  
+%% the new symbol for if-then-else is (_?_;_) (old one was ifelse/3)
 
 %% remark on the syntax: >> has higher priority, hence  ET>>T1;T2 is (ET>>T1);T2
 
-next((ET>>T1;T2), E, T, S) :- !,(match(E,ET,S1) -> next(T1,E,T3,S2),T4=T2,merge(S1, S2, S);next(T2,E,T4,S),T3=T1),filter(ET,T3,T4,T).   
+next((ET>>T1;T2), E, T, S) :- !,(match(E,ET,S1) -> next(T1,E,T3,S2),T4=T2,merge(S1, S2, S);next(T2,E,T4,S),T3=T1),filter(ET,T3,T4,T).
 
-%% next('?'(ET,T1,T2), E, '?'(ET,T3,T4), S) :- !,match(E,ET,S1) -> next(T1,E,T3,S2),T4=T2,merge(S1, S2, S);next(T2,E,T4,S),T3=T1.       
+%% next('?'(ET,T1,T2), E, '?'(ET,T3,T4), S) :- !,match(E,ET,S1) -> next(T1,E,T3,S2),T4=T2,merge(S1, S2, S);next(T2,E,T4,S),T3=T1.
 
 %% (permanent) filter
 %% ET>>T1 = T1/\ET* | notET*
@@ -70,7 +92,7 @@ next(ET>>T, E, T2, S) :- !,(match(E, ET, S1) -> next(T, E, T1, S2),merge(S1, S2,
 
 %% remark on the syntax: > has higher priority, hence  ET>T1;T2 is (ET>T1);T2
 
-next((ET>T1;T2), E, T, S) :- !,match(E,ET,S1) -> next(T1,E,T,S2),merge(S1, S2, S);next(T2,E,T3,S),temp_filter(ET,T1,T3,T).   
+next((ET>T1;T2), E, T, S) :- !,match(E,ET,S1) -> next(T1,E,T,S2),merge(S1, S2, S);next(T2,E,T3,S),temp_filter(ET,T1,T3,T).
 
 
 %% temporary filter
@@ -84,10 +106,10 @@ next((ET>T), E, T1, S) :- !,match(E, ET, S1) -> next(T, E, T1, S2),merge(S1, S2,
 %% legacy clause for just one variable, no need to use a list in this case
 next(app(gen(X,T1),Arg), E, T3, S) :- atom(X),!,eval(Arg,Val),apply_sub_trace_exp([X=Val], T1, T2),!,next(T2, E, T3, S). %% agaian here the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
-%% general clause 
+%% general clause
 next(app(gen(Vars,T1),Args), E, T3, S) :- eval_exps(Vars,Args,Sub),apply_sub_trace_exp(Sub,T1,T2),!,next(T2, E, T3, S).%% agaian here the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
-%% proposal for guarded trace expressions 
+%% proposal for guarded trace expressions
 %% comment: do we really need to return a substitution with solve? According to the ecoop19 calculus guards should be only ground
 %% this should be more in line with the ecoop19/oopsla19 calculus
 next(guarded(P,T1,T2),E,T,S) :- !,P -> next(T1,E,T,S);next(T2,E,T,S).
@@ -126,17 +148,17 @@ num_exp(Exp) :- Exp=..[Op|_],memberchk(Op,[+,-,/,*]).
 
 eval(Exp,Exp) :- (atom(Exp);number(Exp);string(Exp)),!.
 eval(Exp,Val) :- num_exp(Exp),!,Val is Exp.
-eval(Exp,Val) :- Exp -> Val=true;Val=false. %% assumes it is 		 
+eval(Exp,Val) :- Exp -> Val=true;Val=false. %% assumes it is
 
 %% evaluates multiple expressions (to be read: arguments of generics) and assigns values to multiple variables (to be read: parameters of generics)
 %% and computes a corresponding substitution
-eval_exps(Vars,Exps,Sub) :- acc_eval_exps(Vars,Exps,[],Sub). 
+eval_exps(Vars,Exps,Sub) :- acc_eval_exps(Vars,Exps,[],Sub).
 
 acc_eval_exps([],[],Sub,Sub).
 acc_eval_exps([X|Vars],[Exp|Exps],Acc,Sub) :- eval(Exp,Val),acc_eval_exps(Vars,Exps,[X=Val|Acc],Sub).
 
 %% match predicate
-    
+
 %% match(E,ET,S) :- copy_term(ET,FreshET),match(E,FreshET),unifiable(ET,FreshET,S). %% old version
 match(E,ET,Subs) :- copy_term_with_vars(ET,FreshET,Subs), match(E,FreshET). %%,write('matching '),write(E),write(' with '),writeln(FreshET),match(E,FreshET),write('matched ').
 %% debugging version
@@ -162,10 +184,10 @@ may_halt((_>T;_)) :- !, may_halt(T).
 
 
 %% proposal for generics
-%may_halt(app(gen(X,T1),Arg)) :- !, Val is Arg, apply_sub_trace_exp([X=Val],T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp   
+%may_halt(app(gen(X,T1),Arg)) :- !, Val is Arg, apply_sub_trace_exp([X=Val],T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
 
 %% legacy clause for just one variable, no need to use a list in this case
-may_halt(app(gen(X,T1),Arg)) :- atom(X),!,eval(Arg,Val),apply_sub_trace_exp([X=Val],T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp   
+may_halt(app(gen(X,T1),Arg)) :- atom(X),!,eval(Arg,Val),apply_sub_trace_exp([X=Val],T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
 
 %% generic clause
 may_halt(app(gen(Vars,T1),Args)) :- eval_exps(Vars,Args,Subs),apply_sub_trace_exp(Subs,T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
@@ -214,7 +236,7 @@ is1(star(T)) :- is1(T).
 is1(plus(T)) :- is1(T).
 is1(optional(T)) :- is1(T).
 
-    
+
 %%% optimizations
 fork(0,0,0) :- !.
 fork(0,eps,0) :- !.
@@ -248,9 +270,9 @@ conj(T1, T2, T1/\T2).
 filter(_,1,1,1) :- !.
 filter(ET,T,1,ET>>T) :- !.
 filter(ET,T1,T2,(ET>>T1;T2)).
-	
+
 %% (permanent) filter
-%% (ET>>T1) = (ET>>T1;1) = T1/\ET* | 1/\notET* = T1/\ET* | notET* 
+%% (ET>>T1) = (ET>>T1;1) = T1/\ET* | 1/\notET* = T1/\ET* | notET*
 
 filter(_,1,1) :- !.
 filter(ET,T,ET>>T).
@@ -282,7 +304,7 @@ prefix_clos(T,clos(T)).
 %% split(X,[Y=V|S],[Y=V],S) :- X==Y,!.
 %% split(X,[A|S],S1,[A|S2]) :- split(X,S,S1,S2).
 
-% generalized split 
+% generalized split
 split(_,[],[],[]) :- !.
 
 split(Vs,S,S_in,S_out) :- acc_split(Vs,S,[],S_in,[],S_out). %% Vs: list of distinct variables, S: initial substitution, S_in: part of S including vars in Vs, S_out=S\S_in
@@ -290,9 +312,9 @@ split(Vs,S,S_in,S_out) :- acc_split(Vs,S,[],S_in,[],S_out). %% Vs: list of disti
 %% auxiliary predicate with accumulators
 acc_split(_,[],S_in,S_in,S_out,S_out).
 acc_split(Vs,[X=V|S],Acc_in,S_in,Acc_out,S_out) :- %% memberchk should work, substitutions should be always ground
-    memberchk(X,Vs) -> acc_split(Vs,S,[X=V|Acc_in],S_in,Acc_out,S_out);acc_split(Vs,S,Acc_in,S_in,[X=V|Acc_out],S_out). 
+    memberchk(X,Vs) -> acc_split(Vs,S,[X=V|Acc_in],S_in,Acc_out,S_out);acc_split(Vs,S,Acc_in,S_in,[X=V|Acc_out],S_out).
 
-% auxiliary predicate to check whether substitution S maps variable X into value V 
+% auxiliary predicate to check whether substitution S maps variable X into value V
 apply(S,X,V) :- memberchk(X=V,S). %% memberchk should work, substitutions should be always ground
 
 % auxiliary predicate to check whether a variable is in the domain of a substitution
@@ -302,7 +324,7 @@ apply(S,X,V) :- memberchk(X=V,S). %% memberchk should work, substitutions should
 unbound(Vars,[],Vars).
 unbound(Vars,[X=_|Subs],Vars3) :- delete(Vars,X,Vars2),!,unbound(Vars2,Subs,Vars3).
 
-% substitution application generalized to all (finite) substitutions, not just singleton and empty substitutions 
+% substitution application generalized to all (finite) substitutions, not just singleton and empty substitutions
 apply_sub_trace_exp([],T,T) :- !.  %% optimization
 apply_sub_trace_exp(_,1,1) :- !.
 apply_sub_trace_exp(_,0,0) :- !.
@@ -314,7 +336,7 @@ apply_sub_trace_exp(S,T1*T2,T3*T4) :- !,apply_sub_trace_exp(S,T1,T3),apply_sub_t
 apply_sub_trace_exp(S,T1/\T2,T3/\T4) :- !,apply_sub_trace_exp(S,T1,T3),apply_sub_trace_exp(S,T2,T4).
 %% legacy clause for just one variable, no need to use a list in this case
 apply_sub_trace_exp(S,var(X, T1),var(X, T2)) :- atom(X),!,split([X],S,_Sx,Srest),apply_sub_trace_exp(Srest,T1,T2).
-%% general clause 
+%% general clause
 apply_sub_trace_exp(S,var(Vars, T1),var(Vars, T2)) :- split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
 apply_sub_trace_exp(S,(ET1>>T1;T2),(ET2>>T3;T4)) :- !,apply_sub_event_type(S,ET1,ET2),apply_sub_trace_exp(S,T1,T3),apply_sub_trace_exp(S,T2,T4).
 apply_sub_trace_exp(S,ET1>>T1,ET2>>T2) :- !,apply_sub_event_type(S,ET1,ET2),apply_sub_trace_exp(S,T1,T2).
@@ -355,7 +377,7 @@ apply_sub_trace_exp(S, optional(T1), optional(T2)) :- !, apply_sub_trace_exp(S, 
 
 %% proposal for the with operator, to be tested
 
-apply_sub_trace_exp(S,with(ET,T,G),with(ET2,T2,G2)) :- !, apply_sub_event_type(S, ET, ET2), apply_sub_trace_exp(S, T, T2), apply_sub_pred(S,G,G2). 
+apply_sub_trace_exp(S,with(ET,T,G),with(ET2,T2,G2)) :- !, apply_sub_event_type(S, ET, ET2), apply_sub_trace_exp(S, T, T2), apply_sub_pred(S,G,G2).
 
 %% proposal for constant declarations
 apply_sub_trace_exp(S,const(Vars, Exps1, T1),const(Vars, Exps2, T2)) :- apply_sub_arg(S,Exps1,Exps2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
@@ -386,7 +408,7 @@ add(A, [], [A]).
 add(X=V1, [Y=V2|S], [X=V1|S]) :- X==Y,!,V1==V2.
 add(A1, [A2|S], [A2|S1]) :- add(A1, S, S1).
 
-% merge two substitutions; fails if they do not agree on the shared variables 
+% merge two substitutions; fails if they do not agree on the shared variables
 merge([], L, L).
 merge([H|T], L, L2) :-
   add(H, L, L1),
@@ -395,7 +417,7 @@ merge([H|T], L, L2) :-
 % lookup: auxiliary predicate for copy_term_with_vars
 % lookup(X,Subs,V,Subs') looks up variable name X in Subs
 % if found returns the corresponding associated Prolog variable V and Subs'=Subs
-% otherwise returns a fresh Prolog variable V, Subs' is obtained from Subs by adding the association X=V 
+% otherwise returns a fresh Prolog variable V, Subs' is obtained from Subs by adding the association X=V
 
 lookup(X,[],Y,[X=Y]).
 lookup(X,[X=V|Subs],V,[X=V|Subs]) :- !.
@@ -403,7 +425,7 @@ lookup(X,[Y=V1|Subs1],V2,[Y=V1|Subs2]) :- lookup(X,Subs1,V2,Subs2).
 
 % copy_term_with_vars
 % needed to properly manage coinduction in the presence of binder variables (they cannot be ordinary Prolog variables!)
-% variables in event types are represented with the syntax "var(name)" 
+% variables in event types are represented with the syntax "var(name)"
 % Subs is the returned list mapping variable names into corresponding Prolog variables
 
 copy_term_with_vars(ET,FreshET,Subs) :- copy_term_with_vars(ET,[],FreshET,Subs).
@@ -413,4 +435,3 @@ copy_term_with_vars(ET1,Subs1,ET2,Subs2) :- ET1=..[F|Args1],copy_term_with_vars_
 
 copy_term_with_vars_list([],Subs,[],Subs).
 copy_term_with_vars_list([ET1|ETL1],Subs1,[ET2|ETL2],Subs3) :- copy_term_with_vars(ET1,Subs1,ET2,Subs2),copy_term_with_vars_list(ETL1,Subs2,ETL2,Subs3).
-
