@@ -7,7 +7,7 @@ The repository contains the Python implementation for integrating RML (Runtime M
 
 ROSMonitoring works only for ROS distributions >=Electric Emys (i.e. since rospy has been supported).
 
-# Pip (https://pypi.org/project/pip/)
+## Pip (https://pypi.org/project/pip/)
 ```bash
 $ sudo apt install pip
 ```
@@ -16,7 +16,7 @@ Using pip we can then install the Python libraries we need.
 $ pip install websocket_client
 $ pip install rospy_message_converter
 ```
-# Prolog (http://www.swi-prolog.org/build/PPA.html):
+## Prolog (http://www.swi-prolog.org/build/PPA.html):
 ```bash
 $ sudo apt-get install software-properties-common
 $ sudo apt-add-repository ppa:swi-prolog/stable
@@ -24,7 +24,7 @@ $ sudo apt-get update
 $ sudo apt-get install swi-prolog
 ```
 
-# Java (https://openjdk.java.net/install/):
+## Java (https://openjdk.java.net/install/):
 For instance, installing openjdk 11 would be:
 ```bash
 $ sudo add-apt-repository ppa:openjdk-r/ppa
