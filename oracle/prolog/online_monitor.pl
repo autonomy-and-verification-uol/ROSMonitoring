@@ -63,7 +63,7 @@ log(Log) :-
     true.
 
 manage_event(WebSocket) :-
-    ws_receive(WebSocket, Msg, [format(json),value_string_as(atom)]), %% value_string_as(atom) passed as option to json_read_dict/3
+    ws_receive(WebSocket, Msg, [format(json),value_string_as(string)]), %% value_string_as(atom) passed as option to json_read_dict/3
     writeln('Monitor has observed: '),
     writeln(Msg),
     (Msg.opcode==close ->
