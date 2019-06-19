@@ -211,6 +211,7 @@ $ cd ~/catkin_ws/
 $ rosrun beginner_tutorials listener_instrumented.py
 ```
 The talker should print the topics on the terminal as before. But, the listener should print nothing.
+Make sure you either source ~/catkin_ws/devel/setup.bash everytime you wish to launch the nodes on a new terminal, or add it to your ~/.bashrc.
 
 ### Adding the monitor in the middle (Offline version).
 
