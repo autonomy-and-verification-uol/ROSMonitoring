@@ -108,6 +108,9 @@ import sys
 import json
 import yaml
 import websocket
+from threading import *
+
+ws_lock = Lock()
 
 from rospy_message_converter import message_converter
         '''
@@ -123,13 +126,15 @@ from rospy_message_converter import message_converter
             pub_with_callbacks += '''
 pub{tp} = rospy.Publisher(name = '{tp}', data_class = {ty}, subscriber_listener = {sbl}, tcp_nodelay = {tcpn}, latch = {la}, headers = {hd}, queue_size = {qs})
 def callback{tp}(data):
-    global online, ws
+    global online, ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
     dict['topic'] = '{tp}'
     dict['time'] = rospy.get_time()
     if online:
+        ws_lock.acquire()
         ws.send(json.dumps(dict))
+        ws_lock.release()
         rospy.loginfo('event propagated to oracle')
     else:
         logging(dict)
