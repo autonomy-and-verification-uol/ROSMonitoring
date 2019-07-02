@@ -121,7 +121,9 @@ Now you should have your local ROSMonitoring folder.
 
 The first thing to do in order to monitor our nodes is to instrument them. Thanks to this step, our monitor will be able to intercept the topics of our interest (even though for now we have only the 'chatter' topic).
 
+```bash
  $ cd ROSMonitoring/instrumentation/
+```
 
 Inside this folder you should find: config.yaml, generator, and generator.py.
 The Python program we are going to execute is generator. But, before doing that, we need to change the configuration file, config.yaml. This configuration file allows us to select which ROS project we want to instrument, and which topics we are interested in ('all' is the keyword for considering all the topics used by the nodes). If we are interested in checking only a subset of the topics used by our nodes, following the syntax of YAML, we can list all the topics one by one instead.
@@ -140,11 +142,13 @@ ROS:
 
 Now we are ready to execute the generator.
 
+```bash
 $ chmod +x generator
 $ ./generator
 $ ./generator
 {'path': '~/catkin_ws/src/beginner_tutorials/scripts/', 'topics': 'all'}
 ('chatter', ('String', 'from std_msgs.msg import String'), 'queue_size=10')
+```
 
 If we go back to the parent folder, we should now find a new folder called ROSMonitor. Inside this folder, two new files have been automatically generated: monitor.py and monitor.yaml
  - monitor.py is the Python definition of the monitor for ROS; its objective is to intercept the topics and log them (for Offline RV) or propagate them to the oracle (Webserver Prolog in this case).
