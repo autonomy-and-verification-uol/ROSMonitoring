@@ -13,6 +13,7 @@ On Ubuntu 18.04 would be:
 $ sudo apt install pip
 ```
 For other distributions, or if this command does not work, follow the instructions at the link reported above.
+
 Using pip we can then install the Python libraries we need.
 ```bash
 $ pip install websocket_client
