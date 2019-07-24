@@ -51,7 +51,8 @@ def main(argv):
                         if not isinstance(config['ROS']['topics'], list):
                             config['ROS']['topics'] = [config['ROS']['topics']]
                         create_monitor(instrument_files(config['ROS']['path'], config['ROS']['topics']), config['ROS']['path'])
-                    create_monitor_config() # create the YAML configuration file which will be used by the monitor
+                    if not os.path.isfile('../ROSMonitor/monitor.yaml'):
+                        create_monitor_config() # create the YAML configuration file which will be used by the monitor
                 else: # the YAML file is not valid
                     print('ROS member has to include the path and the list of topics')
             else: # the YAML file is not valid
