@@ -8,9 +8,11 @@ The repository contains the Python implementation for integrating RML (Runtime M
 ROSMonitoring works only for ROS distributions >=Groovy Galapagos.
 
 ## Pip (https://pypi.org/project/pip/)
+On Ubuntu 18.04 would be:
 ```bash
 $ sudo apt install pip
 ```
+For other distributions, or if this command does not work, follow the instructions at the link reported above.
 Using pip we can then install the Python libraries we need.
 ```bash
 $ pip install websocket_client
@@ -144,7 +146,6 @@ Now we are ready to execute the generator.
 
 ```bash
 $ chmod +x generator
-$ ./generator
 $ ./generator
 {'path': '~/catkin_ws/src/beginner_tutorials/scripts/', 'topics': 'all'}
 ('chatter', ('String', 'from std_msgs.msg import String'), 'queue_size=10')
