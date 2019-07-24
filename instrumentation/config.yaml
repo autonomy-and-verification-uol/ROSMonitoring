@@ -22,7 +22,29 @@
 
 #config file for the instrumentation of ROS
 # this file is given in input to generator.py
-
-ROS:
-  path: <path_to_ROS_project>
-  topics: all
+#
+monitors:
+  - monitor:
+      id: monitor_0
+      topics:
+        - name: chatter
+          type: std_msgs.msg.String
+          action: filter
+        - name: count
+          type: std_msgs.msg.Int32
+          action: log
+        - name: person
+          type: rosmon.msg.Person
+          action: warning
+  # - monitor:
+  #     id: monitor_1
+  #     topics:
+  #       - name: topic4
+  #         type: std_msgs.msg.String
+  #         action: filter
+  #       - name: topic5
+  #         type: std_msgs.msg.Int32
+  #         action: log
+  #       - name: topic6
+  #         type: std_msgs.msg.Bool
+  #         action: warning

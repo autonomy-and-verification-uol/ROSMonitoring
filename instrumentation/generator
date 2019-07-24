@@ -42,21 +42,17 @@ def main(argv):
     with open(args.config_file, 'r') as stream: # open the config file for the generator
         try:
             config = yaml.safe_load(stream) # load the config file
-            if 'ROS' in config: # check if the ROS key is present
-                print(config['ROS']) # debug log
-                if 'path' in config['ROS'] and 'topics' in config['ROS']: # check for the other necessary keys
-                    if config['ROS']['topics'] == 'all': # all is used when all the topics has to be checked
-                        create_monitor(instrument_files(config['ROS']['path']), config['ROS']['path'])
-                    else: # only a list of topics has to be checked
-                        if not isinstance(config['ROS']['topics'], list):
-                            config['ROS']['topics'] = [config['ROS']['topics']]
-                        create_monitor(instrument_files(config['ROS']['path'], config['ROS']['topics']), config['ROS']['path'])
-                    if not os.path.isfile('../ROSMonitor/monitor.yaml'):
-                        create_monitor_config() # create the YAML configuration file which will be used by the monitor
-                else: # the YAML file is not valid
-                    print('ROS member has to include the path and the list of topics')
-            else: # the YAML file is not valid
-                print('config file must contain ROS key')
+            if 'monitors' in config: # check if the ROS key is present
+                print(config['monitors']) # debug log
+                ids = []
+                for monitor in config['monitors']:
+                    if 'id' not in monitor['monitor'] or 'topics' not in monitor['monitor']:
+                        print('Each monitor in the configuration file must contain the id and the list of the topics')
+                        return
+                    ids.append(monitor['monitor']['id'])
+                    create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'])
+                    create_monitor_config(monitor['monitor']['id'])
+                create_launch_file(ids)
         except yaml.YAMLError as exc:
             print(exc)
 

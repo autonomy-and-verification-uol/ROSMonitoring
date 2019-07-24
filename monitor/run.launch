@@ -1,0 +1,7 @@
+
+<launch>
+        
+<node pkg="monitor" type="monitor_0.py" name="monitor_0" output="screen"/>
+            
+</launch>
+        

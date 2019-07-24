@@ -1,0 +1,12 @@
+
+# monitor: # offline RV
+#   log: ./monitor_0_log.txt # file where the monitor will log the observed events
+#   when: offline # when the RV will be applied
+
+monitor: # online RV
+  action: log # default action (optional) # the other possible value is: filter
+  log: ./monitor_0_log.txt # file where the monitor will log the observed events
+  oracle: # the oracle running and ready to check the specification
+    port: 8080 # the port where it is listening
+    url: 127.0.0.1 # the url where it is listening
+  when: online # when the RV will be applied

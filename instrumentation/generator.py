@@ -23,15 +23,6 @@
 import os
 import yaml
 
-def instrument_files(path, topics = None): # function which instruments all the python file in the path
-    files = []
-    topics_with_types = []
-    for r, d, f in os.walk(os.path.expanduser(path), followlinks = True):
-        for file in f: # for all the python files
-            if '.py' in file and 'instrumented' not in file: # excluding the instrumented ones
-                update_topics(os.path.join(r, file), topics_with_types, topics) # instrument the files generating for each one the corresponding '_instrumented' one
-    return topics_with_types # return the topics instrumented with their additional information
-
 def update_topics(file, topics_with_types, topics = None): # instrument the topics inside a single python file
     with open(file, 'r') as content_file: # open the file
         content = content_file.read() # read the content
@@ -97,10 +88,8 @@ def parse_publisher_instantiation(content, begin, end):
         begin = comma + 1
     return args[0], args[1], args[2], args[3], args[4], args[5], args[6]
 
-def create_monitor(topics_with_types, path): # function which creates the python ROS monitor
-    if not os.path.exists('../ROSMonitor'):
-        os.mkdir('../ROSMonitor')
-    with open('../ROSMonitor/monitor.py', 'w') as monitor: # the monitor code will be in monitor.py
+def create_monitor(monitor_id, topics_with_types_and_action): # function which creates the python ROS monitor
+    with open('../monitor/src/' + monitor_id + '.py', 'w') as monitor: # the monitor code will be in monitor.py
     # write the imports the monitor is gonna need
         imports = '''#!/usr/bin/env python
 import rospy
@@ -113,18 +102,22 @@ from threading import *
 ws_lock = Lock()
 
 from rospy_message_converter import message_converter
+from monitor.msg import *
         '''
     # write the imports for the msg types used by the monitor (extracted by the previous instrumentation)
         msg_type_imports = ''
-        for imp in set([imp for (_, (_, imp), _, _, _, _, _) in topics_with_types]):
+        for topic_with_types_and_action in topics_with_types_and_action:
+            package = topic_with_types_and_action['type'][0:topic_with_types_and_action['type'].rfind('.')]
+            type = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:]
             msg_type_imports += '''
-{i}'''.format(i = imp)
+from {p} import {t}'''.format(p = package, t = type)
     # write the creation of the publisher for each topic (and the callback function for the instrumented one)
         pub_with_callbacks = '\n'
         #name, data_class, subscriber_listener=None, tcp_nodelay=False, latch=False, headers=None, queue_size=None
-        for (topic, (type, _), subscriber_listener, tcp_nodelay, latch, headers, queue_size) in topics_with_types:
+        for topic_with_types_and_action in topics_with_types_and_action:
+        #for (topic, (type, _), subscriber_listener, tcp_nodelay, latch, headers, queue_size) in topics_with_types:
             pub_with_callbacks += '''
-pub{tp} = rospy.Publisher(name = '{tp}', data_class = {ty}, subscriber_listener = {sbl}, tcp_nodelay = {tcpn}, latch = {la}, headers = {hd}, queue_size = {qs})
+pub{tp} = rospy.Publisher(name = '{tp}', data_class = {ty}, latch = True, queue_size = 1000)
 def callback{tp}(data):
     global online, ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
@@ -139,18 +132,19 @@ def callback{tp}(data):
     else:
         logging(dict)
         pub_dict['{tp}'].publish(data)
-            '''.format(tp = topic, ty = type, sbl = subscriber_listener, tcpn = tcp_nodelay, la = latch, hd = headers, qs = queue_size)
+            '''.format(tp = topic_with_types_and_action['name'], ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
     # write the dictionary for dynamically keeping track of the publishers
         pub_dict = '''
 pub_dict = {'''
         first_time = True
-        for (topic, (type, _), _, _, _, _, _) in topics_with_types:
+        for topic_with_types_and_action in topics_with_types_and_action:
+        #for (topic, (type, _), _, _, _, _, _) in topics_with_types:
             if(first_time):
                 first_time = False
             else:
                 pub_dict += ', '
             pub_dict += '''
-    '{tp}' : pub{tp}'''.format(tp = topic)
+    '{tp}' : pub{tp}'''.format(tp = topic_with_types_and_action['name'])
         pub_dict += '''
 }
         '''
@@ -158,15 +152,14 @@ pub_dict = {'''
     # write the dictionary for dynamically keeping track of the message types (we need it for the message converter)
         msg_dict = '''
 msg_dict = {'''
-        for (topic, (type, imp), _, _, _, _, _) in topics_with_types:
+        for topic_with_types_and_action in topics_with_types_and_action:
+        #for (topic, (type, imp), _, _, _, _, _) in topics_with_types:
             if(first_time):
                 first_time = False
             else:
                 msg_dict += ', '
-            start = imp.find('from')
-            stop = imp.find('.msg')
             msg_dict += '''
-    '{tp}' : "{ty}"'''.format(tp = topic, ty = (imp[(start+4):stop].replace(' ', '') + '/' + type))
+    '{tp}' : "{ty}"'''.format(tp = topic_with_types_and_action['name'], ty = topic_with_types_and_action['type'][0:topic_with_types_and_action['type'].rfind('.')].replace('.msg', '') + '/' + topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
         msg_dict += '''
 }
         '''
@@ -175,12 +168,15 @@ msg_dict = {'''
     # to the usual Subscribers
         monitor_def = '''
 def monitor():
+    global pub_error
     with open(log, 'w') as log_file:
         log_file.write('')
-    rospy.init_node('monitor', anonymous=True)'''
-        for (topic, (type, _), _, _, _, _, _) in topics_with_types:
+    rospy.init_node('monitor', anonymous=True)
+    pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)'''
+        for topic_with_types_and_action in topics_with_types_and_action:
+        #for (topic, (type, _), _, _, _, _, _) in topics_with_types:
             monitor_def += '''
-    rospy.Subscriber('{tp}_mon', {ty}, callback{tp})'''.format(tp = topic, ty = type)
+    rospy.Subscriber('{tp}_mon', {ty}, callback{tp})'''.format(tp = topic_with_types_and_action['name'], ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
         monitor_def += '''
     rospy.loginfo('monitor started and ready: ' + ('Online' if online else 'Offline'))
         '''
@@ -191,19 +187,31 @@ def monitor():
     # in that case the monitor does not propagate teh event)
         other_callbacks = '''
 def on_message(ws, message):
-    global error, log, action
+    global error, log, actions
     json_dict = json.loads(message)
     if 'error' in json_dict:
         logging(json_dict)
         print('The event ' + message + ' is inconsistent..')
-        if action == 'filter':
+        if actions[json_dict['topic']] == 'filter':
             rospy.loginfo('Not republished..')
+        elif actions[json_dict['topic']] == 'warning':
+            error = MonitorError()
+            error.topic = json_dict['topic']
+            error.time = json_dict['time']
+            error.property = json_dict['spec']
+            del json_dict['topic']
+            del json_dict['time']
+            del json_dict['spec']
+            del json_dict['error']
+            error.content = json.dumps(json_dict)
+            pub_error.publish(error)
         else:
             rospy.loginfo('Let it go..')
             topic = json_dict['topic']
             del json_dict['topic']
             del json_dict['time']
             del json_dict['error']
+            del json_dict['spec']
             ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
             pub_dict[topic].publish(ROS_message)
     	error = True
@@ -234,7 +242,7 @@ def on_open(ws):
 	rospy.loginfo('### websocket is open ###')
 
 def main(argv):
-    global log, action, online, ws
+    global log, actions, online, ws
     with open('{yaml_file}', 'r') as stream:
         try:
             config = yaml.safe_load(stream) # load the config file
@@ -243,7 +251,7 @@ def main(argv):
                     if 'log' in config['monitor']:
                         log = config['monitor']['log']
                     else:
-                        log = './log.txt'
+                        log = './{id}_log.txt'
                     if config['monitor']['when'] == 'offline': #offline RV
                         online = False
                         monitor()
@@ -258,10 +266,19 @@ def main(argv):
                             port = config['monitor']['oracle']['port']
                         else:
                             port = '8080'
-                        if 'action' in config['monitor']:
-                            action = config['monitor']['action']
-                        else:
-                            action = 'log'
+                        '''.format(id = monitor_id, yaml_file =  os.path.abspath('../monitor/src/' + monitor_id + '.yaml'), topics = [topic_with_types_and_action['name'] for topic_with_types_and_action in topics_with_types_and_action])
+        other_callbacks += '''
+                        actions = {'''
+        first_time = True
+        for topic_with_types_and_action in topics_with_types_and_action:
+            if(first_time):
+                first_time = False
+            else:
+                other_callbacks += ', '
+            other_callbacks += '''
+                            '{tp}' : "{act}"'''.format(tp = topic_with_types_and_action['name'], act = topic_with_types_and_action['action'])
+        other_callbacks += '''
+                        }
                         monitor()
                     	websocket.enableTrace(True)
                     	ws = websocket.WebSocketApp(
@@ -280,24 +297,38 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-        '''.format(yaml_file =  os.path.abspath('../ROSMonitor/monitor.yaml'), ros_project = path, topics = [topic for (topic, _, _, _, _, _, _) in topics_with_types])
+        '''
         monitor.write(imports + msg_type_imports + pub_with_callbacks + pub_dict + msg_dict + monitor_def + other_callbacks)
 
-def create_monitor_config(): # function which creates the YAML config file whoch will be used by the monitor
+def create_launch_file(monitor_ids):
+    with open('../monitor/run.launch', 'w') as launch_file:
+        str = '''
+<launch>
+        '''
+        for id in monitor_ids:
+            str += '''
+<node pkg="monitor" type="{monitor_id}.py" name="{monitor_id}" output="screen"/>
+            '''.format(monitor_id = id)
+        str += '''
+</launch>
+        '''
+        launch_file.write(str)
+
+def create_monitor_config(monitor_id): # function which creates the YAML config file whoch will be used by the monitor
     str = '''
 monitor: # offline RV
-  log: ./log.txt # file where the monitor will log the observed events
+  log: ./{id}_log.txt # file where the monitor will log the observed events
   when: offline # when the RV will be applied
 
 # monitor: # online RV
 #   action: log # default action (optional) # the other possible value is: filter
-#   log: ./log.txt # file where the monitor will log the observed events
+#   log: ./{id}_log.txt # file where the monitor will log the observed events
 #   oracle: # the oracle running and ready to check the specification
 #     port: 8080 # the port where it is listening
 #     url: 127.0.0.1 # the url where it is listening
 #   when: online # when the RV will be applied
-  '''
-    with open('../ROSMonitor/monitor.yaml', 'w') as yaml_file:
+  '''.format(id = monitor_id)
+    with open('../monitor/src/' + monitor_id + '.yaml', 'w') as yaml_file:
         yaml_file.write(str)
     #     yaml.dump(offline_config, yaml_file, default_flow_style=False)
     # with open('online.yaml', 'w') as yaml_file:
