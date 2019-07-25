@@ -10,7 +10,7 @@ ws_lock = Lock()
 
 from rospy_message_converter import message_converter
 from monitor.msg import *
-
+        
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from rosmon.msg import Person
@@ -30,7 +30,7 @@ def callbackchatter(data):
     else:
         logging(dict)
         pub_dict['chatter'].publish(data)
-
+            
 pubcount = rospy.Publisher(name = 'count', data_class = Int32, latch = True, queue_size = 1000)
 def callbackcount(data):
     global online, ws, ws_lock
@@ -46,7 +46,7 @@ def callbackcount(data):
     else:
         logging(dict)
         pub_dict['count'].publish(data)
-
+            
 pubperson = rospy.Publisher(name = 'person', data_class = Person, latch = True, queue_size = 1000)
 def callbackperson(data):
     global online, ws, ws_lock
@@ -62,19 +62,19 @@ def callbackperson(data):
     else:
         logging(dict)
         pub_dict['person'].publish(data)
-
+            
 pub_dict = {
-    'chatter' : pubchatter,
-    'count' : pubcount,
+    'chatter' : pubchatter, 
+    'count' : pubcount, 
     'person' : pubperson
 }
-
+        
 msg_dict = {
-    'chatter' : "std_msgs/String",
-    'count' : "std_msgs/Int32",
+    'chatter' : "std_msgs/String", 
+    'count' : "std_msgs/Int32", 
     'person' : "rosmon/Person"
 }
-
+        
 def monitor():
     global pub_error
     with open(log, 'w') as log_file:
@@ -85,26 +85,27 @@ def monitor():
     rospy.Subscriber('count_mon', Int32, callbackcount)
     rospy.Subscriber('person_mon', Person, callbackperson)
     rospy.loginfo('monitor started and ready: ' + ('Online' if online else 'Offline'))
-
+        
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
     if 'error' in json_dict:
         logging(json_dict)
         print('The event ' + message + ' is inconsistent..')
-        print('actions:' + actions[json_dict['topic']])
-        if actions[json_dict['topic']] == 'filter':
-            rospy.loginfo('Not republished..')
-        elif actions[json_dict['topic']] == 'warning':
+        if actions[json_dict['topic']][1]:
+            json_dict_copy = json_dict.copy()
             error = MonitorError()
-            error.topic = json_dict['topic']
-            error.time = json_dict['time']
-            error.property = json_dict['spec']
-            del json_dict['topic']
-            del json_dict['time']
-            del json_dict['spec']
-            error.content = json.dumps(json_dict)
+            error.topic = json_dict_copy['topic']
+            error.time = json_dict_copy['time']
+            error.property = json_dict_copy['spec']
+            del json_dict_copy['topic']
+            del json_dict_copy['time']
+            del json_dict_copy['spec']
+            del json_dict_copy['error']
+            error.content = json.dumps(json_dict_copy)
             pub_error.publish(error)
+        if actions[json_dict['topic']][0] == 'filter':
+            rospy.loginfo('Not republished..')
         else:
             rospy.loginfo('Let it go..')
             topic = json_dict['topic']
@@ -166,11 +167,11 @@ def main(argv):
                             port = config['monitor']['oracle']['port']
                         else:
                             port = '8080'
-
+                        
                         actions = {
-                            'chatter' : "log",
-                            'count' : "filter",
-                            'person' : "warning"
+                            'chatter' : ('filter', True), 
+                            'count' : ('log', False), 
+                            'person' : ('filter', True)
                         }
                         monitor()
                     	websocket.enableTrace(True)
@@ -190,3 +191,4 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
+        

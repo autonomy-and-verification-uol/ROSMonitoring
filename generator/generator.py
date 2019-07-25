@@ -192,19 +192,20 @@ def on_message(ws, message):
     if 'error' in json_dict:
         logging(json_dict)
         print('The event ' + message + ' is inconsistent..')
-        if actions[json_dict['topic']] == 'filter':
-            rospy.loginfo('Not republished..')
-        elif actions[json_dict['topic']] == 'warning':
+        if actions[json_dict['topic']][1]:
+            json_dict_copy = json_dict.copy()
             error = MonitorError()
-            error.topic = json_dict['topic']
-            error.time = json_dict['time']
-            error.property = json_dict['spec']
-            del json_dict['topic']
-            del json_dict['time']
-            del json_dict['spec']
-            del json_dict['error']
-            error.content = json.dumps(json_dict)
+            error.topic = json_dict_copy['topic']
+            error.time = json_dict_copy['time']
+            error.property = json_dict_copy['spec']
+            del json_dict_copy['topic']
+            del json_dict_copy['time']
+            del json_dict_copy['spec']
+            del json_dict_copy['error']
+            error.content = json.dumps(json_dict_copy)
             pub_error.publish(error)
+        if actions[json_dict['topic']][0] == 'filter':
+            rospy.loginfo('Not republished..')
         else:
             rospy.loginfo('Let it go..')
             topic = json_dict['topic']
@@ -271,12 +272,16 @@ def main(argv):
                         actions = {'''
         first_time = True
         for topic_with_types_and_action in topics_with_types_and_action:
+            if 'warning' in topic_with_types_and_action:
+                warning = topic_with_types_and_action['warning']
+            else:
+                warning = False
             if(first_time):
                 first_time = False
             else:
                 other_callbacks += ', '
             other_callbacks += '''
-                            '{tp}' : "{act}"'''.format(tp = topic_with_types_and_action['name'], act = topic_with_types_and_action['action'])
+                            '{tp}' : ('{act}', {w})'''.format(tp = topic_with_types_and_action['name'], act = topic_with_types_and_action['action'], w = warning)
         other_callbacks += '''
                         }
                         monitor()

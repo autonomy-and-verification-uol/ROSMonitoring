@@ -62,6 +62,8 @@ log(Log) :-
 	flush_output(Stream);
     true.
 
+why(Clauses) :- findall((ET, Dict, Clause), clause(match(Ev, ET), (deep_subdict(Dict, Ev), Clause)), Clauses).
+
 manage_event(WebSocket) :-
     ws_receive(WebSocket, Msg, [format(json),value_string_as(string)]), %% value_string_as(atom) passed as option to json_read_dict/3
     writeln('Monitor has observed: '),

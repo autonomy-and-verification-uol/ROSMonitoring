@@ -70,9 +70,9 @@ pub_dict = {
 }
         
 msg_dict = {
-    'topic4' : "String", 
-    'topic5' : "Int32", 
-    'topic6' : "Bool"
+    'topic4' : "std_msgs/String", 
+    'topic5' : "std_msgs/Int32", 
+    'topic6' : "std_msgs/Bool"
 }
         
 def monitor():
@@ -87,23 +87,25 @@ def monitor():
     rospy.loginfo('monitor started and ready: ' + ('Online' if online else 'Offline'))
         
 def on_message(ws, message):
-    global error, log, action
+    global error, log, actions
     json_dict = json.loads(message)
     if 'error' in json_dict:
         logging(json_dict)
         print('The event ' + message + ' is inconsistent..')
-        if action == 'filter':
-            rospy.loginfo('Not republished..')
-        elif action == 'warning':
+        if actions[json_dict['topic']][1]:
+            json_dict_copy = json_dict.copy()
             error = MonitorError()
-            error.topic = json_dict['topic']
-            error.time = json_dict['time']
-            error.property = json_dict['spec']
-            del json_dict['topic']
-            del json_dict['time']
-            del json_dict['spec']
-            error.content = json.dumps(json_dict)
+            error.topic = json_dict_copy['topic']
+            error.time = json_dict_copy['time']
+            error.property = json_dict_copy['spec']
+            del json_dict_copy['topic']
+            del json_dict_copy['time']
+            del json_dict_copy['spec']
+            del json_dict_copy['error']
+            error.content = json.dumps(json_dict_copy)
             pub_error.publish(error)
+        if actions[json_dict['topic']][0] == 'filter':
+            rospy.loginfo('Not republished..')
         else:
             rospy.loginfo('Let it go..')
             topic = json_dict['topic']
@@ -141,7 +143,7 @@ def on_open(ws):
 	rospy.loginfo('### websocket is open ###')
 
 def main(argv):
-    global log, action, online, ws
+    global log, actions, online, ws
     with open('/media/angelo/WorkData/git/ROSMonitoringCuriosity/ROSMonitoring/monitor/src/monitor_1.yaml', 'r') as stream:
         try:
             config = yaml.safe_load(stream) # load the config file
@@ -165,10 +167,12 @@ def main(argv):
                             port = config['monitor']['oracle']['port']
                         else:
                             port = '8080'
-                        if 'action' in config['monitor']:
-                            action = config['monitor']['action']
-                        else:
-                            action = 'log'
+                        
+                        actions = {
+                            'topic4' : ('filter', False), 
+                            'topic5' : ('log', False), 
+                            'topic6' : ('warning', False)
+                        }
                         monitor()
                     	websocket.enableTrace(True)
                     	ws = websocket.WebSocketApp(

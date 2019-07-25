@@ -142,7 +142,6 @@ next(with(ET,T,G), E, T, S) :- !,match(E, ET, S),apply_sub_pred(S,G,G2),G2.
 next(const(Vars, Exps, T1), E, T3, RetSubs) :-
     eval_exps(Vars,Exps,Subs),apply_sub_trace_exp(Subs,T1,T2),!,next(T2,E,T3,RetSubs). %% cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
-
 %% eval predicates for arguments of generics: for the moment only number/boolean expressions, strings and atoms are supported
 num_exp(Exp) :- Exp=..[Op|_],memberchk(Op,[+,-,/,*]).
 

@@ -30,21 +30,23 @@ monitors:
         - name: chatter
           type: std_msgs.msg.String
           action: filter
+          warning: True
         - name: count
           type: std_msgs.msg.Int32
           action: log
         - name: person
           type: rosmon.msg.Person
+          action: filter
+          warning: True
+  - monitor:
+      id: monitor_1
+      topics:
+        - name: topic4
+          type: std_msgs.msg.String
+          action: filter
+        - name: topic5
+          type: std_msgs.msg.Int32
+          action: log
+        - name: topic6
+          type: std_msgs.msg.Bool
           action: warning
-  # - monitor:
-  #     id: monitor_1
-  #     topics:
-  #       - name: topic4
-  #         type: std_msgs.msg.String
-  #         action: filter
-  #       - name: topic5
-  #         type: std_msgs.msg.Int32
-  #         action: log
-  #       - name: topic6
-  #         type: std_msgs.msg.Bool
-  #         action: warning
