@@ -320,6 +320,8 @@ def create_launch_file(monitor_ids):
         launch_file.write(str)
 
 def create_monitor_config(monitor_id): # function which creates the YAML config file whoch will be used by the monitor
+    if os.path.isfile('../monitor/src/' + monitor_id + '.yaml'):
+        return
     str = '''
 monitor: # offline RV
   log: ./{id}_log.txt # file where the monitor will log the observed events
