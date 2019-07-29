@@ -1,4 +1,4 @@
 string topic
 string content
 string property
-time time
+float64 time

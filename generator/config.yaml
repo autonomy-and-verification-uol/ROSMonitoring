@@ -34,19 +34,9 @@ monitors:
         - name: count
           type: std_msgs.msg.Int32
           action: log
+          side: subscriber
         - name: person
           type: rosmon.msg.Person
           action: filter
+          side: publisher
           warning: True
-  - monitor:
-      id: monitor_1
-      topics:
-        - name: topic4
-          type: std_msgs.msg.String
-          action: filter
-        - name: topic5
-          type: std_msgs.msg.Int32
-          action: log
-        - name: topic6
-          type: std_msgs.msg.Bool
-          action: warning

@@ -10,7 +10,7 @@ ws_lock = Lock()
 
 from rospy_message_converter import message_converter
 from monitor.msg import *
-        
+
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from rosmon.msg import Person
@@ -30,8 +30,8 @@ def callbackchatter(data):
     else:
         logging(dict)
         pub_dict['chatter'].publish(data)
-            
-pubcount = rospy.Publisher(name = 'count', data_class = Int32, latch = True, queue_size = 1000)
+
+pubcount = rospy.Publisher(name = 'count_mon', data_class = Int32, latch = True, queue_size = 1000)
 def callbackcount(data):
     global online, ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
@@ -46,7 +46,7 @@ def callbackcount(data):
     else:
         logging(dict)
         pub_dict['count'].publish(data)
-            
+
 pubperson = rospy.Publisher(name = 'person', data_class = Person, latch = True, queue_size = 1000)
 def callbackperson(data):
     global online, ws, ws_lock
@@ -62,19 +62,19 @@ def callbackperson(data):
     else:
         logging(dict)
         pub_dict['person'].publish(data)
-            
+
 pub_dict = {
-    'chatter' : pubchatter, 
-    'count' : pubcount, 
+    'chatter' : pubchatter,
+    'count' : pubcount,
     'person' : pubperson
 }
-        
+
 msg_dict = {
-    'chatter' : "std_msgs/String", 
-    'count' : "std_msgs/Int32", 
+    'chatter' : "std_msgs/String",
+    'count' : "std_msgs/Int32",
     'person' : "rosmon/Person"
 }
-        
+
 def monitor():
     global pub_error
     with open(log, 'w') as log_file:
@@ -82,10 +82,10 @@ def monitor():
     rospy.init_node('monitor', anonymous=True)
     pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
     rospy.Subscriber('chatter_mon', String, callbackchatter)
-    rospy.Subscriber('count_mon', Int32, callbackcount)
+    rospy.Subscriber('count', Int32, callbackcount)
     rospy.Subscriber('person_mon', Person, callbackperson)
     rospy.loginfo('monitor started and ready: ' + ('Online' if online else 'Offline'))
-        
+
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
@@ -167,10 +167,10 @@ def main(argv):
                             port = config['monitor']['oracle']['port']
                         else:
                             port = '8080'
-                        
+
                         actions = {
-                            'chatter' : ('filter', True), 
-                            'count' : ('log', False), 
+                            'chatter' : ('filter', True),
+                            'count' : ('log', False),
                             'person' : ('filter', True)
                         }
                         monitor()
@@ -191,4 +191,3 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-        

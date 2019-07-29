@@ -23,71 +23,6 @@
 import os
 import yaml
 
-def update_topics(file, topics_with_types, topics = None): # instrument the topics inside a single python file
-    with open(file, 'r') as content_file: # open the file
-        content = content_file.read() # read the content
-        index = content.find('Publisher(') # search for a generic Publisher [start]
-        index1 = content.find(')', index) # search for a generic Publisher [end]
-        while index != -1:
-            # extract the arguments from the Publisher instantiation
-            name, data_class, subscriber_listener, tcp_nodelay, latch, headers, queue_size = parse_publisher_instantiation(content, index, index1)
-            name = name.replace("'", '') # we remove the ' just because we use it as a key for the generation of monitor.py later on
-            if topics == None or name in topics:
-                typeImport = ''
-                if name not in [t for (t, _, _, _, _, _, _) in topics_with_types]: # extract the import of the type of the topic
-                    imp1 = content.find('from ')
-                    while imp1 != -1:
-                        imp2 = content.find('\n', imp1)
-                        if content.find('import ' + data_class, imp1, imp2) != -1:
-                            typeImport = content[imp1:imp2] # the import string used later for importing the type into the monitor python file generated
-                            break
-                        else:
-                            imp1 = content.find('from ', (imp1+1))
-                    topics_with_types.append((name, (data_class, typeImport), subscriber_listener, tcp_nodelay, latch, headers, queue_size)) # add the topic, its type, and the queue size
-                    print((name, (data_class, typeImport), subscriber_listener, tcp_nodelay, latch, headers, queue_size)) # debug log
-                # replace the content of the file with the new topic name (we decided to call it <topic>_mon, where <topic> is the previous value)
-                content = content.replace(
-                    content[index:(index1+1)],
-                    '''Publisher(name = '{tp}', data_class = {ty}, subscriber_listener = {sbl}, tcp_nodelay = {tcpn}, latch = {la}, headers = {hd}, queue_size = {qs})'''.format(tp = (name + '_mon'), ty = data_class, sbl = subscriber_listener, tcpn = tcp_nodelay, la = latch, hd = headers, qs = queue_size))
-            index = content.find('Publisher(', (index+1)) # search for the next Publisher defined into the file (if there is one)
-            index1 = content.find(')', index)
-    with open(file.replace(".py", "_instrumented.py"), 'w') as fout:
-        fout.write(content) # update the instrumented file
-
-def parse_publisher_instantiation(content, begin, end):
-    # name, data_class, subscriber_listener=None, tcp_nodelay=False, latch=False, headers=None, queue_size=None
-    name = 'None'
-    data_class = 'None'
-    subscriber_listener = 'None'
-    tcp_nodelay = 'False'
-    latch = 'False'
-    headers = 'None'
-    queue_size = 'None'
-    args = [name, data_class, subscriber_listener, tcp_nodelay, latch, headers, queue_size]
-    dict = {'name':0, 'data_class':1, 'subscriber_listener':2, 'tcp_nodelay':3, 'latch':4, 'headers': 5, 'queue_size':6}
-    round = 0
-    begin += 10
-    stop = False
-    while(not stop):
-        comma = content.find(',', begin, end)
-        if comma == -1:
-            comma = end
-            stop = True
-        assignment = content.find('=', begin, comma)
-        if assignment == -1:
-            value = content[begin:comma].replace(' ', '')
-            args[round] = value
-        else:
-            key = content[begin:assignment].replace(' ', '')
-            value = content[(assignment+1):comma].replace(' ', '')
-            if key in dict:
-                args[dict[key]] = value
-            else:
-                print('Argument ' + key + ' in the Publisher instantiation has not been recognized.. ignored..')
-        round += 1
-        begin = comma + 1
-    return args[0], args[1], args[2], args[3], args[4], args[5], args[6]
-
 def create_monitor(monitor_id, topics_with_types_and_action): # function which creates the python ROS monitor
     with open('../monitor/src/' + monitor_id + '.py', 'w') as monitor: # the monitor code will be in monitor.py
     # write the imports the monitor is gonna need
@@ -113,11 +48,13 @@ from monitor.msg import *
 from {p} import {t}'''.format(p = package, t = type)
     # write the creation of the publisher for each topic (and the callback function for the instrumented one)
         pub_with_callbacks = '\n'
-        #name, data_class, subscriber_listener=None, tcp_nodelay=False, latch=False, headers=None, queue_size=None
         for topic_with_types_and_action in topics_with_types_and_action:
-        #for (topic, (type, _), subscriber_listener, tcp_nodelay, latch, headers, queue_size) in topics_with_types:
+            if 'side' in topic_with_types_and_action and topic_with_types_and_action['side'] == 'subscriber':
+                tp_side = topic_with_types_and_action['name'] + '_mon'
+            else:
+                tp_side = topic_with_types_and_action['name']
             pub_with_callbacks += '''
-pub{tp} = rospy.Publisher(name = '{tp}', data_class = {ty}, latch = True, queue_size = 1000)
+pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)
 def callback{tp}(data):
     global online, ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
@@ -132,7 +69,7 @@ def callback{tp}(data):
     else:
         logging(dict)
         pub_dict['{tp}'].publish(data)
-            '''.format(tp = topic_with_types_and_action['name'], ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
+            '''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
     # write the dictionary for dynamically keeping track of the publishers
         pub_dict = '''
 pub_dict = {'''
@@ -174,9 +111,12 @@ def monitor():
     rospy.init_node('monitor', anonymous=True)
     pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)'''
         for topic_with_types_and_action in topics_with_types_and_action:
-        #for (topic, (type, _), _, _, _, _, _) in topics_with_types:
+            if 'side' in topic_with_types_and_action and topic_with_types_and_action['side'] == 'subscriber':
+                tp_side = topic_with_types_and_action['name']
+            else:
+                tp_side = topic_with_types_and_action['name'] + '_mon'
             monitor_def += '''
-    rospy.Subscriber('{tp}_mon', {ty}, callback{tp})'''.format(tp = topic_with_types_and_action['name'], ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
+    rospy.Subscriber('{tps}', {ty}, callback{tp})'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
         monitor_def += '''
     rospy.loginfo('monitor started and ready: ' + ('Online' if online else 'Offline'))
         '''
@@ -328,7 +268,6 @@ monitor: # offline RV
   when: offline # when the RV will be applied
 
 # monitor: # online RV
-#   action: log # default action (optional) # the other possible value is: filter
 #   log: ./{id}_log.txt # file where the monitor will log the observed events
 #   oracle: # the oracle running and ready to check the specification
 #     port: 8080 # the port where it is listening
