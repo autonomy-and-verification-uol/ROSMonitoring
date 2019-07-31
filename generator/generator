@@ -43,15 +43,37 @@ def main(argv):
         try:
             config = yaml.safe_load(stream) # load the config file
             if 'monitors' in config: # check if the ROS key is present
-                print(config['monitors']) # debug log
                 ids = []
                 for monitor in config['monitors']:
-                    if 'id' not in monitor['monitor'] or 'topics' not in monitor['monitor']:
-                        print('Each monitor in the configuration file must contain the id and the list of the topics')
+                    if 'id' not in monitor['monitor'] or 'topics' not in monitor['monitor'] or 'log' not in monitor['monitor']:
+                        print('Each monitor in the configuration file must contain the id, when, log and the list of the topics fields')
                         return
+                    if 'oracle' in monitor['monitor']  and ('port' not in monitor['monitor']['oracle'] or 'url' not in monitor['monitor']['oracle']):
+                        print('Oracle field must contain port and url information')
+                        return
+                    for topic_with_types_and_action in monitor['monitor']['topics']:
+                        if 'name' not in topic_with_types_and_action or 'type' not in topic_with_types_and_action or 'action' not in topic_with_types_and_action:
+                            print('Each topic needs a name, a type and an action')
+                            return
+                        if topic_with_types_and_action['action'] not in ['log', 'filter']:
+                            print('The actions available for the topics are: log, filter')
+                            return
+                        if 'side' not in topic_with_types_and_action and topic_with_types_and_action['action'] == 'filter':
+                            print('In order to filter the wrong messages, the monitor has to be in the middle of the communication. To have this, the side filed has to be given')
+                            return
+                    if 'oracle' in monitor['monitor']:
+                        if 'url' not in monitor['monitor']['oracle'] or 'port' not in monitor['monitor']['oracle']:
+                            print('url and port must be specified inside the oracle')
+                            return
+                        url =  monitor['monitor']['oracle']['url']
+                        port =  monitor['monitor']['oracle']['port']
+                        if not isinstance(url, str) or not isinstance(port, int):
+                            print('url must be a string and port must be an integer')
+                    else:
+                        url = None
+                        port = None
                     ids.append(monitor['monitor']['id'])
-                    create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'])
-                    create_monitor_config(monitor['monitor']['id'])
+                    create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port)
                 create_launch_file(ids)
         except yaml.YAMLError as exc:
             print(exc)

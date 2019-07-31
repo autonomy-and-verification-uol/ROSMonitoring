@@ -10,82 +10,66 @@ ws_lock = Lock()
 
 from rospy_message_converter import message_converter
 from monitor.msg import *
-
+        
 from std_msgs.msg import String
 from std_msgs.msg import Int32
 from rosmon.msg import Person
 
-pubchatter = rospy.Publisher(name = 'chatter', data_class = String, latch = True, queue_size = 1000)
 def callbackchatter(data):
-    global online, ws, ws_lock
+    global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
     dict['topic'] = 'chatter'
     dict['time'] = rospy.get_time()
-    if online:
-        ws_lock.acquire()
-        ws.send(json.dumps(dict))
-        ws_lock.release()
-        rospy.loginfo('event propagated to oracle')
-    else:
-        logging(dict)
-        pub_dict['chatter'].publish(data)
-
+    ws_lock.acquire()
+    ws.send(json.dumps(dict))
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
 pubcount = rospy.Publisher(name = 'count_mon', data_class = Int32, latch = True, queue_size = 1000)
 def callbackcount(data):
-    global online, ws, ws_lock
+    global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
     dict['topic'] = 'count'
     dict['time'] = rospy.get_time()
-    if online:
-        ws_lock.acquire()
-        ws.send(json.dumps(dict))
-        ws_lock.release()
-        rospy.loginfo('event propagated to oracle')
-    else:
-        logging(dict)
-        pub_dict['count'].publish(data)
-
+    ws_lock.acquire()
+    ws.send(json.dumps(dict))
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
 pubperson = rospy.Publisher(name = 'person', data_class = Person, latch = True, queue_size = 1000)
 def callbackperson(data):
-    global online, ws, ws_lock
+    global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
     dict['topic'] = 'person'
     dict['time'] = rospy.get_time()
-    if online:
-        ws_lock.acquire()
-        ws.send(json.dumps(dict))
-        ws_lock.release()
-        rospy.loginfo('event propagated to oracle')
-    else:
-        logging(dict)
-        pub_dict['person'].publish(data)
+    ws_lock.acquire()
+    ws.send(json.dumps(dict))
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
 
 pub_dict = {
-    'chatter' : pubchatter,
-    'count' : pubcount,
+    'count' : pubcount, 
     'person' : pubperson
 }
-
+        
 msg_dict = {
-    'chatter' : "std_msgs/String",
-    'count' : "std_msgs/Int32",
+    'chatter' : "std_msgs/String", 
+    'count' : "std_msgs/Int32", 
     'person' : "rosmon/Person"
 }
-
+        
 def monitor():
     global pub_error
     with open(log, 'w') as log_file:
         log_file.write('')
     rospy.init_node('monitor', anonymous=True)
     pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
-    rospy.Subscriber('chatter_mon', String, callbackchatter)
+    rospy.Subscriber('chatter', String, callbackchatter)
     rospy.Subscriber('count', Int32, callbackcount)
     rospy.Subscriber('person_mon', Person, callbackperson)
-    rospy.loginfo('monitor started and ready: ' + ('Online' if online else 'Offline'))
-
+    rospy.loginfo('monitor started and ready')
+        
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
@@ -114,7 +98,8 @@ def on_message(ws, message):
             del json_dict['error']
             del json_dict['spec']
             ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
-            pub_dict[topic].publish(ROS_message)
+            if topic in pub_dict:
+                pub_dict[topic].publish(ROS_message)
     	error = True
     else:
         logging(json_dict)
@@ -123,15 +108,8 @@ def on_message(ws, message):
         del json_dict['time']
     	rospy.loginfo('The event ' + message + ' is consistent and republished')
         ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
-    	pub_dict[topic].publish(ROS_message)
-
-def logging(json_dict):
-    try:
-        with open(log, 'a+') as log_file:
-            log_file.write(json.dumps(json_dict) + '\n')
-        rospy.loginfo('event logged')
-    except:
-        rospy.loginfo('Unable to log the event.')
+    	if topic in pub_dict:
+            pub_dict[topic].publish(ROS_message)
 
 def on_error(ws, error):
     rospy.loginfo(error)
@@ -141,53 +119,33 @@ def on_close(ws):
 
 def on_open(ws):
 	rospy.loginfo('### websocket is open ###')
+            
+def logging(json_dict):
+    try:
+        with open(log, 'a+') as log_file:
+            log_file.write(json.dumps(json_dict) + '\n')
+        rospy.loginfo('event logged')
+    except:
+        rospy.loginfo('Unable to log the event.')
 
 def main(argv):
-    global log, actions, online, ws
-    with open('/media/angelo/WorkData/git/ROSMonitoringCuriosity/ROSMonitoring/monitor/src/monitor_0.yaml', 'r') as stream:
-        try:
-            config = yaml.safe_load(stream) # load the config file
-            if 'monitor' in config:
-                if 'when' in config['monitor']:
-                    if 'log' in config['monitor']:
-                        log = config['monitor']['log']
-                    else:
-                        log = './monitor_0_log.txt'
-                    if config['monitor']['when'] == 'offline': #offline RV
-                        online = False
-                        monitor()
-                        rospy.spin()
-                    else: # online RV
-                        online = True
-                        if 'oracle' in config['monitor'] and 'url' in config['monitor']['oracle']:
-                            url = config['monitor']['oracle']['url']
-                        else:
-                            url = '127.0.0.1'
-                        if 'oracle' in config['monitor'] and 'port' in config['monitor']['oracle']:
-                            port = config['monitor']['oracle']['port']
-                        else:
-                            port = '8080'
-
-                        actions = {
-                            'chatter' : ('filter', True),
-                            'count' : ('log', False),
-                            'person' : ('filter', True)
-                        }
-                        monitor()
-                    	websocket.enableTrace(True)
-                    	ws = websocket.WebSocketApp(
-                            'ws://' + url + ':' + str(port),
-                            on_message = on_message,
-                            on_error = on_error,
-                            on_close = on_close,
-                            on_open = on_open)
-                    	ws.run_forever()
-                else:
-                    print('monitor config file must contain the key \'when\' with values \'offline\' or \'online\'')
-            else:
-                print('monitor config file must contain the key \'monitor\'')
-        except yaml.YAMLError as exc:
-            print(exc)
-
+    global log, actions, ws
+    log = './log_0.txt'
+    
+    actions = {
+            'chatter' : ('log', True), 
+            'count' : ('log', False), 
+            'person' : ('filter', True)
+    }
+    monitor()
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp(
+        'ws://127.0.0.1:8080',
+        on_message = on_message,
+        on_error = on_error,
+        on_close = on_close,
+        on_open = on_open)
+    ws.run_forever()
 if __name__ == '__main__':
     main(sys.argv)
+        

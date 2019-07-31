@@ -23,7 +23,7 @@
 import os
 import yaml
 
-def create_monitor(monitor_id, topics_with_types_and_action): # function which creates the python ROS monitor
+def create_monitor(monitor_id, topics_with_types_and_action, log, url, port): # function which creates the python ROS monitor
     with open('../monitor/src/' + monitor_id + '.py', 'w') as monitor: # the monitor code will be in monitor.py
     # write the imports the monitor is gonna need
         imports = '''#!/usr/bin/env python
@@ -53,34 +53,45 @@ from {p} import {t}'''.format(p = package, t = type)
                 tp_side = topic_with_types_and_action['name'] + '_mon'
             else:
                 tp_side = topic_with_types_and_action['name']
+            if 'side' in topic_with_types_and_action:
+                if topic_with_types_and_action['side'] == 'subscriber':
+                    tp_side = topic_with_types_and_action['name'] + '_mon'
+                else:
+                    tp_side = topic_with_types_and_action['name']
+                pub_with_callbacks += '''
+pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
             pub_with_callbacks += '''
-pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)
 def callback{tp}(data):
-    global online, ws, ws_lock
+    global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
     dict['topic'] = '{tp}'
-    dict['time'] = rospy.get_time()
-    if online:
-        ws_lock.acquire()
-        ws.send(json.dumps(dict))
-        ws_lock.release()
-        rospy.loginfo('event propagated to oracle')
-    else:
-        logging(dict)
-        pub_dict['{tp}'].publish(data)
-            '''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
+    dict['time'] = rospy.get_time()'''.format(tp = topic_with_types_and_action['name'])
+            if url != None and port != None:
+                pub_with_callbacks += '''
+    ws_lock.acquire()
+    ws.send(json.dumps(dict))
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')'''
+            else:
+                pub_with_callbacks += '''
+    logging(dict)'''
+                if 'side' in topic_with_types_and_action:
+                    pub_with_callbacks += '''
+    pub_dict['{tp}'].publish(data)'''.format(tp = topic_with_types_and_action['name'])
     # write the dictionary for dynamically keeping track of the publishers
         pub_dict = '''
+
 pub_dict = {'''
         first_time = True
         for topic_with_types_and_action in topics_with_types_and_action:
         #for (topic, (type, _), _, _, _, _, _) in topics_with_types:
-            if(first_time):
-                first_time = False
-            else:
-                pub_dict += ', '
-            pub_dict += '''
+            if 'side' in topic_with_types_and_action:
+                if(first_time):
+                    first_time = False
+                else:
+                    pub_dict += ', '
+                pub_dict += '''
     '{tp}' : pub{tp}'''.format(tp = topic_with_types_and_action['name'])
         pub_dict += '''
 }
@@ -111,21 +122,25 @@ def monitor():
     rospy.init_node('monitor', anonymous=True)
     pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)'''
         for topic_with_types_and_action in topics_with_types_and_action:
-            if 'side' in topic_with_types_and_action and topic_with_types_and_action['side'] == 'subscriber':
-                tp_side = topic_with_types_and_action['name']
+            if 'side' in topic_with_types_and_action:
+                if topic_with_types_and_action['side'] == 'subscriber':
+                    tp_side = topic_with_types_and_action['name']
+                else:
+                    tp_side = topic_with_types_and_action['name'] + '_mon'
             else:
-                tp_side = topic_with_types_and_action['name'] + '_mon'
+                tp_side = topic_with_types_and_action['name']
             monitor_def += '''
     rospy.Subscriber('{tps}', {ty}, callback{tp})'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
         monitor_def += '''
-    rospy.loginfo('monitor started and ready: ' + ('Online' if online else 'Offline'))
+    rospy.loginfo('monitor started and ready')
         '''
     # write the auxiliary callbacks functions called by the websocket used by the monitor
     # when a topic is observed by the monitor, if we are doing online RV, it propagates the topic to the
     # oracle. The oracle checks the event and returns the outcome to the monitor
     # the monitor then propagates the event to the other nodes (unless we decided to filter the errors,
     # in that case the monitor does not propagate teh event)
-        other_callbacks = '''
+        if url != None and port != None:
+            other_callbacks = '''
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
@@ -154,7 +169,8 @@ def on_message(ws, message):
             del json_dict['error']
             del json_dict['spec']
             ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
-            pub_dict[topic].publish(ROS_message)
+            if topic in pub_dict:
+                pub_dict[topic].publish(ROS_message)
     	error = True
     else:
         logging(json_dict)
@@ -163,15 +179,8 @@ def on_message(ws, message):
         del json_dict['time']
     	rospy.loginfo('The event ' + message + ' is consistent and republished')
         ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
-    	pub_dict[topic].publish(ROS_message)
-
-def logging(json_dict):
-    try:
-        with open(log, 'a+') as log_file:
-            log_file.write(json.dumps(json_dict) + '\\n')
-        rospy.loginfo('event logged')
-    except:
-        rospy.loginfo('Unable to log the event.')
+    	if topic in pub_dict:
+            pub_dict[topic].publish(ROS_message)
 
 def on_error(ws, error):
     rospy.loginfo(error)
@@ -181,35 +190,24 @@ def on_close(ws):
 
 def on_open(ws):
 	rospy.loginfo('### websocket is open ###')
+            '''
+        else:
+            other_callbacks = ''
+        other_callbacks += '''
+def logging(json_dict):
+    try:
+        with open(log, 'a+') as log_file:
+            log_file.write(json.dumps(json_dict) + '\\n')
+        rospy.loginfo('event logged')
+    except:
+        rospy.loginfo('Unable to log the event.')
 
 def main(argv):
-    global log, actions, online, ws
-    with open('{yaml_file}', 'r') as stream:
-        try:
-            config = yaml.safe_load(stream) # load the config file
-            if 'monitor' in config:
-                if 'when' in config['monitor']:
-                    if 'log' in config['monitor']:
-                        log = config['monitor']['log']
-                    else:
-                        log = './{id}_log.txt'
-                    if config['monitor']['when'] == 'offline': #offline RV
-                        online = False
-                        monitor()
-                        rospy.spin()
-                    else: # online RV
-                        online = True
-                        if 'oracle' in config['monitor'] and 'url' in config['monitor']['oracle']:
-                            url = config['monitor']['oracle']['url']
-                        else:
-                            url = '127.0.0.1'
-                        if 'oracle' in config['monitor'] and 'port' in config['monitor']['oracle']:
-                            port = config['monitor']['oracle']['port']
-                        else:
-                            port = '8080'
-                        '''.format(id = monitor_id, yaml_file =  os.path.abspath('../monitor/src/' + monitor_id + '.yaml'), topics = [topic_with_types_and_action['name'] for topic_with_types_and_action in topics_with_types_and_action])
+    global log, actions, ws
+    log = '{l}'
+    '''.format(l = log)
         other_callbacks += '''
-                        actions = {'''
+    actions = {'''
         first_time = True
         for topic_with_types_and_action in topics_with_types_and_action:
             if 'warning' in topic_with_types_and_action:
@@ -221,25 +219,26 @@ def main(argv):
             else:
                 other_callbacks += ', '
             other_callbacks += '''
-                            '{tp}' : ('{act}', {w})'''.format(tp = topic_with_types_and_action['name'], act = topic_with_types_and_action['action'], w = warning)
+            '{tp}' : ('{act}', {w})'''.format(tp = topic_with_types_and_action['name'], act = topic_with_types_and_action['action'], w = warning)
+        if url != None and port != None:
+            other_callbacks += '''
+    }}
+    monitor()
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp(
+        'ws://{u}:{p}',
+        on_message = on_message,
+        on_error = on_error,
+        on_close = on_close,
+        on_open = on_open)
+    ws.run_forever()'''.format(u = url, p = port)
+        else:
+            other_callbacks += '''
+    }
+    monitor()
+    rospy.spin()
+            '''
         other_callbacks += '''
-                        }
-                        monitor()
-                    	websocket.enableTrace(True)
-                    	ws = websocket.WebSocketApp(
-                            'ws://' + url + ':' + str(port),
-                            on_message = on_message,
-                            on_error = on_error,
-                            on_close = on_close,
-                            on_open = on_open)
-                    	ws.run_forever()
-                else:
-                    print('monitor config file must contain the key \\'when\\' with values \\'offline\\' or \\'online\\'')
-            else:
-                print('monitor config file must contain the key \\'monitor\\'')
-        except yaml.YAMLError as exc:
-            print(exc)
-
 if __name__ == '__main__':
     main(sys.argv)
         '''
@@ -258,24 +257,3 @@ def create_launch_file(monitor_ids):
 </launch>
         '''
         launch_file.write(str)
-
-def create_monitor_config(monitor_id): # function which creates the YAML config file whoch will be used by the monitor
-    if os.path.isfile('../monitor/src/' + monitor_id + '.yaml'):
-        return
-    str = '''
-monitor: # offline RV
-  log: ./{id}_log.txt # file where the monitor will log the observed events
-  when: offline # when the RV will be applied
-
-# monitor: # online RV
-#   log: ./{id}_log.txt # file where the monitor will log the observed events
-#   oracle: # the oracle running and ready to check the specification
-#     port: 8080 # the port where it is listening
-#     url: 127.0.0.1 # the url where it is listening
-#   when: online # when the RV will be applied
-  '''.format(id = monitor_id)
-    with open('../monitor/src/' + monitor_id + '.yaml', 'w') as yaml_file:
-        yaml_file.write(str)
-    #     yaml.dump(offline_config, yaml_file, default_flow_style=False)
-    # with open('online.yaml', 'w') as yaml_file:
-    #     yaml.dump(online_config, yaml_file, default_flow_style=False)
