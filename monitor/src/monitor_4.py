@@ -17,13 +17,6 @@ from std_msgs.msg import String
 from std_msgs.msg import String
 from std_msgs.msg import String
 from std_msgs.msg import String
-from std_msgs.msg import String
-from std_msgs.msg import String
-from std_msgs.msg import String
-from std_msgs.msg import String
-from std_msgs.msg import String
-from std_msgs.msg import String
-from std_msgs.msg import String
 
 pubtopic_44 = rospy.Publisher(name = 'topic_44', data_class = String, latch = True, queue_size = 1000)
 def callbacktopic_44(data):
@@ -36,23 +29,12 @@ def callbacktopic_44(data):
     ws.send(json.dumps(dict))
     ws_lock.release()
     #rospy.loginfo('event propagated to oracle')
-pubtopic_32 = rospy.Publisher(name = 'topic_32', data_class = String, latch = True, queue_size = 1000)
-def callbacktopic_32(data):
+pubtopic_4 = rospy.Publisher(name = 'topic_4', data_class = String, latch = True, queue_size = 1000)
+def callbacktopic_4(data):
     global ws, ws_lock
     #rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'topic_32'
-    dict['time'] = rospy.get_time()
-    ws_lock.acquire()
-    ws.send(json.dumps(dict))
-    ws_lock.release()
-    #rospy.loginfo('event propagated to oracle')
-pubtopic_40 = rospy.Publisher(name = 'topic_40', data_class = String, latch = True, queue_size = 1000)
-def callbacktopic_40(data):
-    global ws, ws_lock
-    #rospy.loginfo('monitor has observed: ' + str(data))
-    dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'topic_40'
+    dict['topic'] = 'topic_4'
     dict['time'] = rospy.get_time()
     ws_lock.acquire()
     ws.send(json.dumps(dict))
@@ -91,39 +73,6 @@ def callbacktopic_12(data):
     ws.send(json.dumps(dict))
     ws_lock.release()
     #rospy.loginfo('event propagated to oracle')
-pubtopic_24 = rospy.Publisher(name = 'topic_24', data_class = String, latch = True, queue_size = 1000)
-def callbacktopic_24(data):
-    global ws, ws_lock
-    #rospy.loginfo('monitor has observed: ' + str(data))
-    dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'topic_24'
-    dict['time'] = rospy.get_time()
-    ws_lock.acquire()
-    ws.send(json.dumps(dict))
-    ws_lock.release()
-    #rospy.loginfo('event propagated to oracle')
-pubtopic_48 = rospy.Publisher(name = 'topic_48', data_class = String, latch = True, queue_size = 1000)
-def callbacktopic_48(data):
-    global ws, ws_lock
-    #rospy.loginfo('monitor has observed: ' + str(data))
-    dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'topic_48'
-    dict['time'] = rospy.get_time()
-    ws_lock.acquire()
-    ws.send(json.dumps(dict))
-    ws_lock.release()
-    #rospy.loginfo('event propagated to oracle')
-pubtopic_16 = rospy.Publisher(name = 'topic_16', data_class = String, latch = True, queue_size = 1000)
-def callbacktopic_16(data):
-    global ws, ws_lock
-    #rospy.loginfo('monitor has observed: ' + str(data))
-    dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'topic_16'
-    dict['time'] = rospy.get_time()
-    ws_lock.acquire()
-    ws.send(json.dumps(dict))
-    ws_lock.release()
-    #rospy.loginfo('event propagated to oracle')
 pubtopic_20 = rospy.Publisher(name = 'topic_20', data_class = String, latch = True, queue_size = 1000)
 def callbacktopic_20(data):
     global ws, ws_lock
@@ -135,70 +84,23 @@ def callbacktopic_20(data):
     ws.send(json.dumps(dict))
     ws_lock.release()
     #rospy.loginfo('event propagated to oracle')
-pubtopic_4 = rospy.Publisher(name = 'topic_4', data_class = String, latch = True, queue_size = 1000)
-def callbacktopic_4(data):
-    global ws, ws_lock
-    #rospy.loginfo('monitor has observed: ' + str(data))
-    dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'topic_4'
-    dict['time'] = rospy.get_time()
-    ws_lock.acquire()
-    ws.send(json.dumps(dict))
-    ws_lock.release()
-    #rospy.loginfo('event propagated to oracle')
-pubtopic_0 = rospy.Publisher(name = 'topic_0', data_class = String, latch = True, queue_size = 1000)
-def callbacktopic_0(data):
-    global ws, ws_lock
-    #rospy.loginfo('monitor has observed: ' + str(data))
-    dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'topic_0'
-    dict['time'] = rospy.get_time()
-    ws_lock.acquire()
-    ws.send(json.dumps(dict))
-    ws_lock.release()
-    #rospy.loginfo('event propagated to oracle')
-pubtopic_8 = rospy.Publisher(name = 'topic_8', data_class = String, latch = True, queue_size = 1000)
-def callbacktopic_8(data):
-    global ws, ws_lock
-    #rospy.loginfo('monitor has observed: ' + str(data))
-    dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'topic_8'
-    dict['time'] = rospy.get_time()
-    ws_lock.acquire()
-    ws.send(json.dumps(dict))
-    ws_lock.release()
-    #rospy.loginfo('event propagated to oracle')
 
 pub_dict = {
     'topic_44' : pubtopic_44, 
-    'topic_32' : pubtopic_32, 
-    'topic_40' : pubtopic_40, 
+    'topic_4' : pubtopic_4, 
     'topic_28' : pubtopic_28, 
     'topic_36' : pubtopic_36, 
     'topic_12' : pubtopic_12, 
-    'topic_24' : pubtopic_24, 
-    'topic_48' : pubtopic_48, 
-    'topic_16' : pubtopic_16, 
-    'topic_20' : pubtopic_20, 
-    'topic_4' : pubtopic_4, 
-    'topic_0' : pubtopic_0, 
-    'topic_8' : pubtopic_8
+    'topic_20' : pubtopic_20
 }
         
 msg_dict = {
     'topic_44' : "std_msgs/String", 
-    'topic_32' : "std_msgs/String", 
-    'topic_40' : "std_msgs/String", 
+    'topic_4' : "std_msgs/String", 
     'topic_28' : "std_msgs/String", 
     'topic_36' : "std_msgs/String", 
     'topic_12' : "std_msgs/String", 
-    'topic_24' : "std_msgs/String", 
-    'topic_48' : "std_msgs/String", 
-    'topic_16' : "std_msgs/String", 
-    'topic_20' : "std_msgs/String", 
-    'topic_4' : "std_msgs/String", 
-    'topic_0' : "std_msgs/String", 
-    'topic_8' : "std_msgs/String"
+    'topic_20' : "std_msgs/String"
 }
         
 def monitor():
@@ -208,18 +110,11 @@ def monitor():
     rospy.init_node('monitor', anonymous=True)
     pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
     rospy.Subscriber('topic_44_mon', String, callbacktopic_44)
-    rospy.Subscriber('topic_32_mon', String, callbacktopic_32)
-    rospy.Subscriber('topic_40_mon', String, callbacktopic_40)
+    rospy.Subscriber('topic_4_mon', String, callbacktopic_4)
     rospy.Subscriber('topic_28_mon', String, callbacktopic_28)
     rospy.Subscriber('topic_36_mon', String, callbacktopic_36)
     rospy.Subscriber('topic_12_mon', String, callbacktopic_12)
-    rospy.Subscriber('topic_24_mon', String, callbacktopic_24)
-    rospy.Subscriber('topic_48_mon', String, callbacktopic_48)
-    rospy.Subscriber('topic_16_mon', String, callbacktopic_16)
     rospy.Subscriber('topic_20_mon', String, callbacktopic_20)
-    rospy.Subscriber('topic_4_mon', String, callbacktopic_4)
-    rospy.Subscriber('topic_0_mon', String, callbacktopic_0)
-    rospy.Subscriber('topic_8_mon', String, callbacktopic_8)
     #rospy.loginfo('monitor started and ready')
         
 def on_message(ws, message):
@@ -283,27 +178,20 @@ def logging(json_dict):
 
 def main(argv):
     global log, actions, ws
-    log = './log_monitor_0.txt'
+    log = './log_monitor_4.txt'
     
     actions = {
             'topic_44' : ('log', False), 
-            'topic_32' : ('log', False), 
-            'topic_40' : ('log', False), 
+            'topic_4' : ('log', False), 
             'topic_28' : ('log', False), 
             'topic_36' : ('log', False), 
             'topic_12' : ('log', False), 
-            'topic_24' : ('log', False), 
-            'topic_48' : ('log', False), 
-            'topic_16' : ('log', False), 
-            'topic_20' : ('log', False), 
-            'topic_4' : ('log', False), 
-            'topic_0' : ('log', False), 
-            'topic_8' : ('log', False)
+            'topic_20' : ('log', False)
     }
     monitor()
     websocket.enableTrace(False)
     ws = websocket.WebSocketApp(
-        'ws://127.0.0.1:8080',
+        'ws://127.0.0.1:8084',
         on_message = on_message,
         on_error = on_error,
         on_close = on_close,

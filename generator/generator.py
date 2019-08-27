@@ -63,7 +63,7 @@ pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue
             pub_with_callbacks += '''
 def callback{tp}(data):
     global ws, ws_lock
-    rospy.loginfo('monitor has observed: ' + str(data))
+    #rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
     dict['topic'] = '{tp}'
     dict['time'] = rospy.get_time()'''.format(tp = topic_with_types_and_action['name'])
@@ -72,7 +72,7 @@ def callback{tp}(data):
     ws_lock.acquire()
     ws.send(json.dumps(dict))
     ws_lock.release()
-    rospy.loginfo('event propagated to oracle')'''
+    #rospy.loginfo('event propagated to oracle')'''
             else:
                 pub_with_callbacks += '''
     logging(dict)'''
@@ -132,7 +132,7 @@ def monitor():
             monitor_def += '''
     rospy.Subscriber('{tps}', {ty}, callback{tp})'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
         monitor_def += '''
-    rospy.loginfo('monitor started and ready')
+    #rospy.loginfo('monitor started and ready')
         '''
     # write the auxiliary callbacks functions called by the websocket used by the monitor
     # when a topic is observed by the monitor, if we are doing online RV, it propagates the topic to the
@@ -159,10 +159,11 @@ def on_message(ws, message):
             del json_dict_copy['error']
             error.content = json.dumps(json_dict_copy)
             pub_error.publish(error)
-        if actions[json_dict['topic']][0] == 'filter':
-            rospy.loginfo('Not republished..')
-        else:
-            rospy.loginfo('Let it go..')
+        #if actions[json_dict['topic']][0] == 'filter':
+            #rospy.loginfo('Not republished..')
+        #else:
+            #rospy.loginfo('Let it go..')
+        if actions[json_dict['topic']][0] != 'filter':
             topic = json_dict['topic']
             del json_dict['topic']
             del json_dict['time']
@@ -177,7 +178,7 @@ def on_message(ws, message):
         topic = json_dict['topic']
         del json_dict['topic']
         del json_dict['time']
-    	rospy.loginfo('The event ' + message + ' is consistent and republished')
+    	#rospy.loginfo('The event ' + message + ' is consistent and republished')
         ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
     	if topic in pub_dict:
             pub_dict[topic].publish(ROS_message)
@@ -198,7 +199,7 @@ def logging(json_dict):
     try:
         with open(log, 'a+') as log_file:
             log_file.write(json.dumps(json_dict) + '\\n')
-        rospy.loginfo('event logged')
+        #rospy.loginfo('event logged')
     except:
         rospy.loginfo('Unable to log the event.')
 
@@ -224,7 +225,7 @@ def main(argv):
             other_callbacks += '''
     }}
     monitor()
-    websocket.enableTrace(True)
+    websocket.enableTrace(False)
     ws = websocket.WebSocketApp(
         'ws://{u}:{p}',
         on_message = on_message,

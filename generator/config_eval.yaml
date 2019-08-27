@@ -1,0 +1,305 @@
+
+# MIT License
+#
+# Copyright (c) [2019] [Angelo Ferrando]
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# Config file for the instrumentation of ROS
+# this file is given in input to generator
+#
+monitors:
+    - monitor:
+        id: monitor_0
+        log: ./log_monitor_0.txt # file where the monitor will log the observed events
+        oracle: # the oracle running and ready to check the specification
+            port: 8080 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+        topics:
+            - name: topic_44
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_32
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_40
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_28
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_36
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_12
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_24
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_48
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_16
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_20
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_4
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_0
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_8
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+    - monitor:
+        id: monitor_1
+        log: ./log_monitor_1.txt # file where the monitor will log the observed events
+        oracle: # the oracle running and ready to check the specification
+            port: 8081 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+        topics:
+            - name: topic_45
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_33
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_41
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_37
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_29
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_13
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_25
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_17
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_49
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_21
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_5
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_1
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_9
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+    - monitor:
+        id: monitor_2
+        log: ./log_monitor_2.txt # file where the monitor will log the observed events
+        oracle: # the oracle running and ready to check the specification
+            port: 8082 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+        topics:
+            - name: topic_30
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_46
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_18
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_34
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_42
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_26
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_38
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_10
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_22
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_14
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_6
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_2
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+    - monitor:
+        id: monitor_3
+        log: ./log_monitor_3.txt # file where the monitor will log the observed events
+        oracle: # the oracle running and ready to check the specification
+            port: 8083 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+        topics:
+            - name: topic_31
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_19
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_47
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_35
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_43
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_39
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_27
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_11
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_23
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_15
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_7
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
+            - name: topic_3
+              type: std_msgs.msg.String
+              action: log
+              warning: False
+              side: publisher
