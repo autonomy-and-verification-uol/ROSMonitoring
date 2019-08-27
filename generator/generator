@@ -58,8 +58,8 @@ def main(argv):
                         if topic_with_types_and_action['action'] not in ['log', 'filter']:
                             print('The actions available for the topics are: log, filter')
                             return
-                        if 'side' not in topic_with_types_and_action and topic_with_types_and_action['action'] == 'filter':
-                            print('In order to filter the wrong messages, the monitor has to be in the middle of the communication. To have this, the side filed has to be given')
+                        if ('side' not in topic_with_types_and_action or 'oracle' not in monitor['monitor']) and topic_with_types_and_action['action'] == 'filter':
+                            print('In order to filter the wrong messages, the monitor has to be ONLINE and in the middle of the communication. To have this, the \'side\' and \'oracle\' fields have to be given')
                             return
                     if 'oracle' in monitor['monitor']:
                         if 'url' not in monitor['monitor']['oracle'] or 'port' not in monitor['monitor']['oracle']:
