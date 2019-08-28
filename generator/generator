@@ -48,8 +48,8 @@ def main(argv):
                     if 'id' not in monitor['monitor'] or 'topics' not in monitor['monitor'] or 'log' not in monitor['monitor']:
                         print('Each monitor in the configuration file must contain the id, when, log and the list of the topics fields')
                         return
-                    if 'oracle' in monitor['monitor']  and ('port' not in monitor['monitor']['oracle'] or 'url' not in monitor['monitor']['oracle']):
-                        print('Oracle field must contain port and url information')
+                    if 'oracle' in monitor['monitor']  and ('port' not in monitor['monitor']['oracle'] or 'url' not in monitor['monitor']['oracle'] or 'action' not in monitor['monitor']['oracle']):
+                        print('Url, port and action must be specified inside the oracle')
                         return
                     for topic_with_types_and_action in monitor['monitor']['topics']:
                         if 'name' not in topic_with_types_and_action or 'type' not in topic_with_types_and_action or 'action' not in topic_with_types_and_action:
@@ -62,18 +62,25 @@ def main(argv):
                             print('In order to filter the wrong messages, the monitor has to be ONLINE and in the middle of the communication. To have this, the \'side\' and \'oracle\' fields have to be given')
                             return
                     if 'oracle' in monitor['monitor']:
-                        if 'url' not in monitor['monitor']['oracle'] or 'port' not in monitor['monitor']['oracle']:
-                            print('url and port must be specified inside the oracle')
-                            return
                         url =  monitor['monitor']['oracle']['url']
                         port =  monitor['monitor']['oracle']['port']
+                        oracle_action =  monitor['monitor']['oracle']['action']
                         if not isinstance(url, str) or not isinstance(port, int):
                             print('url must be a string and port must be an integer')
+                            return
+                        if oracle_action not in ['nothing', 'modify']:
+                            print('The actions available for the oracle are: nothing, modify')
+                            return
                     else:
                         url = None
                         port = None
+                        oracle_action = None
                     ids.append(monitor['monitor']['id'])
-                    create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port)
+                    if 'silent' in monitor['monitor'] and monitor['monitor']['silent']:
+                        silent = True
+                    else:
+                        silent = False
+                    create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent)
                 create_launch_file(ids)
         except yaml.YAMLError as exc:
             print(exc)

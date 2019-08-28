@@ -23,7 +23,7 @@
 import os
 import yaml
 
-def create_monitor(monitor_id, topics_with_types_and_action, log, url, port): # function which creates the python ROS monitor
+def create_monitor(monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent): # function which creates the python ROS monitor
     with open('../monitor/src/' + monitor_id + '.py', 'w') as monitor: # the monitor code will be in monitor.py
     # write the imports the monitor is gonna need
         imports = '''#!/usr/bin/env python
@@ -33,12 +33,14 @@ import json
 import yaml
 import websocket
 from threading import *
-
-ws_lock = Lock()
-
 from rospy_message_converter import message_converter
 from monitor.msg import *
-        '''
+
+ws_lock = Lock()'''
+        if oracle_action == 'nothing':
+            imports += '''
+dict_msgs = {}
+            '''
     # write the imports for the msg types used by the monitor (extracted by the previous instrumentation)
         msg_type_imports = ''
         for topic_with_types_and_action in topics_with_types_and_action:
@@ -62,20 +64,37 @@ from {p} import {t}'''.format(p = package, t = type)
 pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
             pub_with_callbacks += '''
 def callback{tp}(data):
-    global ws, ws_lock
-    #rospy.loginfo('monitor has observed: ' + str(data))
+    global ws, ws_lock'''.format(tp = topic_with_types_and_action['name'])
+            if not silent:
+                pub_with_callbacks += '''
+    rospy.loginfo('monitor has observed: ' + str(data))'''
+            pub_with_callbacks += '''
     dict = message_converter.convert_ros_message_to_dictionary(data)
     dict['topic'] = '{tp}'
-    dict['time'] = rospy.get_time()'''.format(tp = topic_with_types_and_action['name'])
+    dict['time'] = rospy.get_time()
+    ws_lock.acquire()'''.format(tp = topic_with_types_and_action['name'])
+
+            if oracle_action == 'nothing':
+                pub_with_callbacks += '''
+    while dict['time'] in dict_msgs:
+        dict['time'] += 0.01'''
             if url != None and port != None:
                 pub_with_callbacks += '''
-    ws_lock.acquire()
-    ws.send(json.dumps(dict))
-    ws_lock.release()
-    #rospy.loginfo('event propagated to oracle')'''
+    ws.send(json.dumps(dict))'''
+                if oracle_action == 'nothing':
+                    pub_with_callbacks += '''
+    dict_msgs[dict['time']] = data'''
+                pub_with_callbacks += '''
+    ws_lock.release()'''
+                if not silent:
+                    pub_with_callbacks += '''
+    rospy.loginfo('event propagated to oracle')'''
             else:
                 pub_with_callbacks += '''
     logging(dict)'''
+                if not silent:
+                    pub_with_callbacks += '''
+    rospy.loginfo('event has been successfully logged')'''
                 if 'side' in topic_with_types_and_action:
                     pub_with_callbacks += '''
     pub_dict['{tp}'].publish(data)'''.format(tp = topic_with_types_and_action['name'])
@@ -131,8 +150,9 @@ def monitor():
                 tp_side = topic_with_types_and_action['name']
             monitor_def += '''
     rospy.Subscriber('{tps}', {ty}, callback{tp})'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
-        monitor_def += '''
-    #rospy.loginfo('monitor started and ready')
+        if not silent:
+            monitor_def += '''
+    rospy.loginfo('monitor started and ready')
         '''
     # write the auxiliary callbacks functions called by the websocket used by the monitor
     # when a topic is observed by the monitor, if we are doing online RV, it propagates the topic to the
@@ -145,44 +165,67 @@ def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
     if 'error' in json_dict:
-        logging(json_dict)
-        print('The event ' + message + ' is inconsistent..')
+        logging(json_dict)'''
+            if not silent:
+                other_callbacks += '''
+        rospy.loginfo('The event ' + message + ' is inconsistent..')'''
+            other_callbacks += '''
         if actions[json_dict['topic']][1]:
-            json_dict_copy = json_dict.copy()
             error = MonitorError()
-            error.topic = json_dict_copy['topic']
-            error.time = json_dict_copy['time']
-            error.property = json_dict_copy['spec']
+            error.topic = json_dict['topic']
+            error.time = json_dict['time']
+            error.property = json_dict['spec']'''
+            if oracle_action == 'nothing':
+                other_callbacks += '''
+            error.content = dict_msgs[json_dict['time']]'''
+            else:
+                other_callbacks += '''
+            json_dict_copy = json_dict.copy()
             del json_dict_copy['topic']
             del json_dict_copy['time']
             del json_dict_copy['spec']
             del json_dict_copy['error']
-            error.content = json.dumps(json_dict_copy)
+            error.content = json.dumps(json_dict_copy)'''
+            other_callbacks += '''
             pub_error.publish(error)
-        #if actions[json_dict['topic']][0] == 'filter':
-            #rospy.loginfo('Not republished..')
-        #else:
-            #rospy.loginfo('Let it go..')
         if actions[json_dict['topic']][0] != 'filter':
-            topic = json_dict['topic']
+            topic = json_dict['topic']'''
+            if oracle_action == 'nothing':
+                other_callbacks += '''
+            if topic in pub_dict:
+                pub_dict[topic].publish(dict_msgs[json_dict['time']])
+            del dict_msgs[json_dict['time']]'''
+            else:
+                other_callbacks += '''
             del json_dict['topic']
             del json_dict['time']
             del json_dict['error']
             del json_dict['spec']
             ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
             if topic in pub_dict:
-                pub_dict[topic].publish(ROS_message)
+                pub_dict[topic].publish(ROS_message)'''
+            other_callbacks += '''
     	error = True
     else:
         logging(json_dict)
-        topic = json_dict['topic']
+        topic = json_dict['topic']'''
+            if not silent:
+                other_callbacks += '''
+    	rospy.loginfo('The event ' + message + ' is consistent and republished')'''
+            if oracle_action == 'nothing':
+                other_callbacks += '''
+        if topic in pub_dict:
+            pub_dict[topic].publish(dict_msgs[json_dict['time']])
+        del dict_msgs[json_dict['time']]'''
+            else:
+                other_callbacks += '''
         del json_dict['topic']
         del json_dict['time']
-    	#rospy.loginfo('The event ' + message + ' is consistent and republished')
         ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
     	if topic in pub_dict:
             pub_dict[topic].publish(ROS_message)
-
+        '''
+            other_callbacks += '''
 def on_error(ws, error):
     rospy.loginfo(error)
 
@@ -198,8 +241,11 @@ def on_open(ws):
 def logging(json_dict):
     try:
         with open(log, 'a+') as log_file:
-            log_file.write(json.dumps(json_dict) + '\\n')
-        #rospy.loginfo('event logged')
+            log_file.write(json.dumps(json_dict) + '\\n')'''
+        if not silent:
+            other_callbacks += '''
+        rospy.loginfo('event logged')'''
+        other_callbacks += '''
     except:
         rospy.loginfo('Unable to log the event.')
 

@@ -27,9 +27,11 @@ monitors:
   - monitor:
       id: monitor_0
       log: ./log_0.txt # file where the monitor will log the observed events
+      silent: False
       oracle: # the oracle running and ready to check the specification
         port: 8080 # the port where it is listening
         url: 127.0.0.1 # the url where it is listening
+        action: nothing
       topics:
         - name: chatter
           type: std_msgs.msg.String
@@ -37,7 +39,7 @@ monitors:
           warning: True
         - name: count
           type: std_msgs.msg.Int32
-          action: log
+          action: filter
           side: subscriber
         - name: person
           type: rosmon.msg.Person
