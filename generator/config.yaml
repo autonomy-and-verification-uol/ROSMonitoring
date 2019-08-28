@@ -31,7 +31,7 @@ monitors:
       oracle: # the oracle running and ready to check the specification
         port: 8080 # the port where it is listening
         url: 127.0.0.1 # the url where it is listening
-        action: nothing
+        action: nothing # the oracle will not change the message
       topics:
         - name: chatter
           type: std_msgs.msg.String
