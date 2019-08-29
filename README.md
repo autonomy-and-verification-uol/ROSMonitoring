@@ -114,12 +114,12 @@ We need the ROSMonitoring implementation in order to instrument and verify our n
 
 In the terminal:
 ```bash
- $ roscd beginner_tutorials/
+ $ cd ~/
  $ git clone https://github.com/autonomy-and-verification-uol/ROSMonitoring.git
 ```
 Now you should have your local ROSMonitoring folder.
 
-### Create a simple monitor
+### Create a simple Offline monitor
 
 The creation of a monitor is extremely flexible, and we can easily customize how many monitors, what they can do, and above all, what they are going to check (which topics, and so on).
 For customizing the monitors, we use a YAML configuration file. You can find different ones we already prepared for you for exploring ROSMonitoring in the Talker-Listener example.
@@ -148,109 +148,41 @@ monitors: # here we list the monitors we are going to generate
           action: log # the monitor will log the messages exchanged on this topic 
 ```
 
-Now we are ready to execute the generator.
+This configuration file informs the generator about two nodes: talker and listener. Along with important information concerning their package and where we can find the corresponding launch file (which is the one we created previously).  
+
+Now we can run the generator passing this configuration file in the following way. 
 
 ```bash
+$ cd ~/ROSMonitoring/generator/
 $ chmod +x generator
-$ ./generator
-{'path': '~/catkin_ws/src/beginner_tutorials/scripts/', 'topics': 'all'}
-('chatter', ('String', 'from std_msgs.msg import String'), 'queue_size=10')
+$ ./generator --config_file offline_config.yaml
 ```
 
-If we go back to the parent folder, we should now find a new folder called ROSMonitor. Inside this folder, two new files have been automatically generated: monitor.py and monitor.yaml
- - monitor.py is the Python definition of the monitor for ROS; its objective is to intercept the topics and log them (for Offline RV) or propagate them to the oracle (Webserver Prolog in this case).
- - monitor.yaml is the configuration file for the monitor node.
+Going back to the 'ROSMonitoring' folder, if we look into the 'monitor/src/' folder, we will find a new generated Python script called 'monitor.py'. This file contains the code for the monitor.
+Inside 'beginner_tutorials' we can also find now a new launch file called 'run_instrumented.launch'.
 
-Before going on, let us have a look at monitor.yaml
-```yaml
-monitor: # offline RV
- log: ./log.txt # file where the monitor will log the observed events
- when: offline # when the RV will be applied
+Now, if we want to run our ROS nodes with the new monitor together, we have to just copy the monitor folder under 'catkin_ws/src'. Since we are adding a new ROS package (the monitor package), we need also to re-run the catkin_make command.
 
-# monitor: # online RV
-#   action: log # default action (optional) # the other possible value is: filter
-#   log: ./log.txt # file where the monitor will log the observed events
-#   oracle: # the oracle running and ready to check the specification
-#     port: 8080 # the port where it is listening
-#     url: 127.0.0.1 # the url where it is listening
-#   when: online # when the RV will be applied
-```
+Now we have everything we need to run the system along with the monitor.
 
-The default configuration file for the monitor is set for Offline RV. In the commented part we have a possible use for the Online version. The YAML syntax is very intuitive, focusing for now on the Offline parameters, we can set where the events observed by the monitor will be saved (default here is log.txt), and at which time the RV will be applied (in this case Offline, setting the corresponding 'when' item).
+In a terminal we do:
 
-The generator has not created the ROSMonitor folder, but it has also instrumented our nodes.
-Let us have a look inside the scripts folder.
-```bash
-$ cd ~/catkin_ws/src/beginner_tutorials/scripts/
-$ ls
-listener_instrumented.py  listener.py  talker_instrumented.py  talker.py
-```
-As we can see, now we have two new files: talker_instrumented.py and listener_instrumented.py
-
-These two instrumented files are equal to the previous ones. The only difference is in the substitution of the topics which are published by talker. If we compare talker.py with talker_instrumented.py, we find a small difference.
-
-In talker.py we have:
-```python
-...
-pub = rospy.Publisher('chatter', String, queue_size=10)
-...
-```
-While in talker_instrumented.py we have:
-```python
-...
-pub = rospy.Publisher('chatter_mon', String, queue_size=10)
-...
-```
-
-Even though this can seem as a worthless modification, it allows us to put a monitor in the middle of the communication.
-In fact, the instrumented talker publishes on a different topic now ('chatter_mon'), while the listener (which in this specific case is totally unchanged since it does not publish anything) listens on the old one ('chatter'). If we run the two instrumented nodes as we did before with the normal ones, we would observe that the two nodes are not able to communicate anymore. Because the talker publishes a topic that is not subscribed by the listener.
-
-Remember: roscore must be running on another terminal..
-```bash
-$ cd ~/catkin_ws/src/beginner_tutorials/scripts/
-$ chmod +x talker_instrumented.py
-$ chmod +x listener_instrumented.py
-```
-In a terminal then
 ```bash
 $ cd ~/catkin_ws/
-$ rosrun beginner_tutorials talker_instrumented.py
+$ roslaunch src/monitor/run.launch
 ```
-and in a different one
+
+Then, in another terminal we do:
+
 ```bash
 $ cd ~/catkin_ws/
-$ rosrun beginner_tutorials listener_instrumented.py
-```
-The talker should print the topics on the terminal as before. But, the listener should print nothing.
-Make sure you either source ~/catkin_ws/devel/setup.bash everytime you wish to launch the nodes on a new terminal, or add it to your ~/.bashrc.
-
-### Adding the monitor in the middle (Offline version).
-
-In order to re-establish the communication between our nodes, we have to execute the monitor which has been created by the generator program.
-
-On a different terminal:
-```bash
-$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/ROSMonitor/
-$ chmod +x monitor.py
-$ cd ~/catkin_ws/
-$ rosrun beginner_tutorials monitor.py
-[INFO] [1559652181.670203]: monitor started and ready: Offline
+$ chmod +x src/monitor/src/monitor.py
+$ roslaunch src/beginner_tutorials/run_instrumented.launch
 ```
 
-The monitor is now ready to intercept the messages.
+You should not notice any difference, even though now we have a monitor running along with the two other nodes.
+What is it actually happening? We have created and run an offline monitor. If we stop the nodes and the monitor, we should see that a new file has been created inside 'catkin_ws', called 'log.txt' (as we set in the config file).
 
-Let us execute again the instrumented nodes (talker_instrumented.py and listener_instrumented.py) as we did before.
-This time they will be able to communicate.
-
-The monitor should print on the terminal something like this:
-```bash
-[INFO] [1559638171.740409]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638171.840524]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello
-```
-
-Since we have selected Offline RV, the monitor is only logging the events.
 We can find the automatically generated log file (log.txt) inside ~/catkin_ws folder.
 
 The log file should look like this:
@@ -261,11 +193,14 @@ The log file should look like this:
 ...
 ```
 
+The so generated log file can be parsed by any runtime monitor, as long as the latter supports events formatted using Json.
+The default Oracle for ROSMonitoring is implemented in SWI-Prolog and supports the RML formalism.
+
 The last step for the Offline version is to check the log file against a formal specification.
 To do this, first we copy the log file into the prolog folder, and then we run the monitor (using the already given sh file).
 ```bash
-$ cp ~/catkin_ws/log.txt ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/oracle/
-$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/oracle/prolog/
+$ cp ~/catkin_ws/log.txt ~/ROSMonitoring/oracle/
+$ cd ~/ROSMonitoring/oracle/prolog/
 $ sh offline_monitor.sh ../rml/test.pl ../log.txt
 ...
 matched event #89
@@ -283,53 +218,73 @@ The test.pl is the lower level representation of test.rml (contained in the same
 
 For instance, to generate test.pl, we can do as follows:
 ```bash
-$ cd ~/catkin-ws/src/beginner_tutorials/ROSMonitoring/oracle/rml/
+$ cd ~/ROSMonitoring/oracle/rml/
 $ java -jar rml-compiler.jar --input test.rml --output test.pl
 ```
 The compiler will automatically compile the rml file into the equivalent prolog one, which can be used directly from the Prolog monitor.
 More information about RML can be found at: https://rmlatdibris.github.io/
 
-### Adding the monitor in the middle (Online version).
 
-Before we used our monitor only for logging purposes. But, the real power of our monitor lies in being the bridge among ROS nodes communications.
-Instead of generating only a log file, we can check the events generated inside ROS dynamically.
+### Adding a monitor in the middle.
 
-In order to execute the Online version, we need to do two things first.
+In the previous example we saw how to generate a monitor which logs the intercepted events. In that scenario we can achieve in this way offline RV, because we are analyzing previously generated traces. But, with ROSMonitoring we can do much more than that. We can create a monitor which achieves online RV, meaning that the analysis is done while the system is running.
 
-We have to update the monitor.yaml configuration file, and we have to run the Webserver Prolog (our oracle) in order to check the specification against the events observed by monitor.py.
+Let's have a look at the other configuration file called: 'online_config.yaml'
 
-The modification of monitor.yaml can be done very easily, just swapping the comments.
 ```yaml
-# monitor: # offline RV
-#  log: ./log.txt # file where the monitor will log the observed events
-#  when: offline # when the RV will be applied
+nodes: # here we list the nodes we are going to monitor
+  - node:
+      name: talker
+      package: beginner_tutorials
+      path: ~/catkin_ws/src/beginner_tutorials/run.launch
+  - node:
+      name: listener
+      package: beginner_tutorials
+      path: ~/catkin_ws/src/beginner_tutorials/run.launch
 
-monitor: # online RV
-   action: log # default action (optional) # the other possible value is: filter
-   log: ./log.txt # file where the monitor will log the observed events
-   oracle: # the oracle running and ready to check the specification
-     port: 8080 # the port where it is listening
-     url: 127.0.0.1 # the url where it is listening
-   when: online # when the RV will be applied
+monitors: # here we list the monitors we are going to generate
+  - monitor:
+      id: monitor
+      log: ./log.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      oracle: # the oracle running and ready to check the specification (localhost in this case)
+        port: 8080 # the port where it is listening
+        url: 127.0.0.1 # the url where it is listening
+        action: nothing # the oracle will not change the message
+      topics: # the list of topics this monitor is going to intercept
+        - name: chatter # name of the topic
+          type: std_msgs.msg.String # type of the topic
+          action: filter 
+          publishers:
+           - talker
 ```
-As for the Offline case, also here we have different parameters for customize the RV process. More specifically, we need to inform the ROS monitor about the oracle (Webserver Prolog here). So, we have to specify where it will be listening (url) and on which port (8080). A new parameter available only for the Online version is 'action'. Thanks to this argument, we can choose what the monitor can do when an error is observed (i.e. an event inconsistent with our specification). The possible values for now are: log and filter.
- - log, the monitor logs everything (also the errors)
- - filter, the monitor propagates only the events which are consistent with the specification
 
-If we try to run our monitor again as before, it will raise an error.
+This configuration file is very similar to the previous one. But this time we are asking for the generation of an online monitor. In order to do so, we need to inform the generator where the Oracle is listening and on which port. In this way, the generated monitor will be capable of communicating with it using WebSockets.
+Another addition to this configuration file is the 'publishers' field inside the chatter topic.
+Since we are doing online RV, the monitor is checking the events at runtime. Now, if we wanted just to log each event, we could maintain the action set to 'log'. The behaviour in this way would be exactly the same as for the offline monitor, with the only difference that each time an event is observed, the monitor propagates this event to the oracle and waits for the current verdict against a chosen property. Consequently, rather than the offline case, in the online scenario, the monitor will also log the satisfaction/violation of the property (but nothing more). This can be useful if we are debuggin a system, but in a real scenario we could need to enforce the correcteness of the events. For instance, filtering the events which are considered wrong by the Oracle. For doing this, we can change the action from 'log' to 'filter'.
+
+Once the action 'filter' is selected, the monitor will filter the wrong messages. But, to be able to do so, it must be in the middle of the communication. Until now the monitor was only another node in the system and was just subscribing the topics. This is not enough if we want to filter the wrong messages. In order to solve this problem, ROSMonitoring instrument the nodes changing the names and creating gaps in the communications. Thanks to this communication gaps, the monitor can become a bridge for the topics of our interest, and filter the messages in case they are wrong.
+
+To create the gap the generator needs to know who is the publisher (or subscriber) for the topic we want ot filter. In this case we indicate 'talker', which is the publisher for the 'chatter' topic.
+
+After that, we can simply run again the generator.
+
 ```bash
-$ cd ~/catkin_ws/
-$ rosrun beginner_tutorials monitor.py
-[INFO] [1559657476.706400]: monitor started and ready: Online
-[INFO] [1559657476.707265]: [Errno 111] Connection refused
-[INFO] [1559657476.707966]: ### websocket closed ###
+$ cd ~/ROSMonitoring/generator/
+$ chmod +x generator
+$ ./generator --config_file online_config.yaml
 ```
-The error is caused by the absence of an oracle ready on 127.0.0.1:8080.
+
+This will generate again a new monitor and the launch files we need.
+As before, now we just have to copy the monitor folder under the catkin workspace and run catkin_make again.
+
+Since now the monitor is online, it needs an oracle to check the events. As for the offline case, ROSMonitoring does not require any specific runtime monitor to be used as Oracle. The only requirements are having an Oracle capable of communicating through WebSockets and able to parse Json events.
+Again, ROSMonitoring already have a default Oracle, which is implemented in SWI-Prolog and supports the RML formalism.
 
 Thus, before running our Online monitor, we need to execute the Webserver Prolog, as possible implementation of our oracle.
 ```bash
-$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/oracle/prolog/
-$ sh online_monitor.sh ../rml/test.pl
+$ cd ~/ROSMonitoring/oracle/prolog/
+$ sh online_monitor.sh ../rml/test.pl 8080
 % Started server at http://127.0.0.1:8080/
 Welcome to SWI-Prolog (threaded, 64 bits, version 8.0.2)
 SWI-Prolog comes with ABSOLUTELY NO WARRANTY. This is free software.
@@ -340,138 +295,6 @@ For built-in help, use ?- help(Topic). or ?- apropos(Word).
 
 ?-
 ```
-The Webserver is now ready and running.
 
-The execution of the monitor is the same as for the Offline case, but we can see that each time the ROS monitor observes an event, instead of logging it, it first sends it to the Webserver Prolog in order to check the event against the RML specification.
-Also in the terminal where we are executing monitor.py we can notice different log information with respect to the Offline version.
-```bash
-$ rosrun beginner_tutorials monitor.py
-...
-[INFO] [1559658087.038097]: monitor has observed: hello
-[INFO] [1559658087.136548]: event propagated to oracle
-The event {"data":"hello", "topic":"chatter"} is consistent and republished
-...
-```
-In the piece of output showed above we can see how the monitor, first intercepts an event, then it propagates the event to the oracle, and finally upon the reception from the oracle saying the event is consistent, it logs this information.
-
-### Using the filter action
-
-The last part of this tutorial will show the use of the monitor for filtering the wrong events.
-
-The specification file test.rml (and its compilation test.pl) are already prepared for being used in a slightly more complex example.
-
-In order to filter wrong events, we need nodes generating wrong events first.
-
-Let us change the talker.py file in the following way:
-```python
-import rospy
-from std_msgs.msg import String
-from std_msgs.msg import Int32
-
-def talker():
-    pub = rospy.Publisher('chatter', String, queue_size=10)
-    pub_c = rospy.Publisher('count', Int32, queue_size=10)
-    rospy.init_node('talker', anonymous=True)
-    rate = rospy.Rate(10) # 10hz
-    count = 0
-    while not rospy.is_shutdown():
-        hello_str = "hello"# %s" % rospy.get_time()
-        rospy.loginfo(hello_str)
-        pub.publish(hello_str)
-        rospy.loginfo('count ' + str(count))
-        pub_c.publish(count)
-        count += 1
-        rate.sleep()
-
-if __name__ == '__main__':
-    try:
-        talker()
-    except rospy.ROSInterruptException:
-        pass
-```
-With respect to the previous version, now the talker node publishes also a counter.
-
-And of course, also the listener must change in order to care about the new topic.
-```python
-import rospy
-from std_msgs.msg import String
-from std_msgs.msg import Int32
-
-def callback(data):
-    rospy.loginfo(rospy.get_caller_id() + 'I heard %s', data.data)
-
-def callback_c(data):
-    rospy.loginfo(rospy.get_caller_id() + 'I heard count %s', str(data.data))
-
-def listener():
-
-    # In ROS, nodes are uniquely named. If two nodes with the same
-    # name are launched, the previous one is kicked off. The
-    # anonymous=True flag means that rospy will choose a unique
-    # name for our 'listener' node so that multiple listeners can
-    # run simultaneously.
-    rospy.init_node('listener', anonymous=True)
-
-    rospy.Subscriber('chatter', String, callback)
-
-    rospy.Subscriber('count', Int32, callback_c)
-
-    # spin() simply keeps python from exiting until this node is stopped
-    rospy.spin()
-
-if __name__ == '__main__':
-    listener()
-```
-We now have two callbacks which are doing the same thing, to log on the terminal.
-
-Since now we have changed the files, we need to re-instrument them.
-```bash
-$ cd ~/catkin_ws/src/beginner_tutorials/ROSMonitoring/instrumentation/
-$ ./generator
-{'path': '~/catkin_ws/src/rosmon/scripts/', 'topics': 'all'}
-('chatter', ('String', 'from std_msgs.msg import String'), 'queue_size=10')
-('count', ('Int32', 'from std_msgs.msg import Int32'), 'queue_size=10')
-```
-Since we have not selected any specific topics inside monitor.yaml, we automatically consider the new count topic among the topics to be monitored.
-
-The specification given in test.rml is very trivial, but, it constrains the valid values for count.
-```prolog
-hello matches {topic:'chatter',data:'hello'};
-count matches {topic:'count',data:val} with val > 100;
-
-Main = (hello \/ count)*;
-```
-The first two lines refer to the kind of events our specification handles.
-In particular, the second one has a constraint on the value observed for the topic count. Very naively, we are just saying that the count events are valid only if greater than 100.
-
-If we now change the monitor.yaml configuration file in order to filter the wrong events (since we executed generator, we have to uncomment again the Online part).
-```yaml
-# monitor: # offline RV
-#  log: ./log.txt # file where the monitor will log the observed events
-#  when: offline # when the RV will be applied
-
-monitor: # online RV
-   action: filter # default action (optional) # the other possible value is: filter
-   log: ./log.txt # file where the monitor will log the observed events
-   oracle: # the oracle running and ready to check the specification
-     port: 8080 # the port where it is listening
-     url: 127.0.0.1 # the url where it is listening
-   when: online # when the RV will be applied
-```
-In this way, we are saying to the monitor that we want to filter the wrong events.
-
-Let us try again the Online verification (as before)!
-
-We should now notice that the count events are not propagated to the listener node until they reach value 101.
-```bash
-...
-[INFO] [1559638170.561132]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638170.894412]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638171.941144]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638172.040488]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638172.203479]: /listener_27375_1559638153394I heard 101
-[INFO] [1559638172.608934]: /listener_27375_1559638153394I heard hello
-[INFO] [1559638173.004578]: /listener_27375_1559638153394I heard 102
-...
-```
-The Online monitor always generates the log file (as the Offline monitor). The big difference is that for each event saved inside the log file, we already add the information about the presence of an error or not (simply adding the 'error':True key-value into the traces).
+After that we can do the same as for the offline case. First we run 'run.launch' for running the monitor, and then we run 'run_instrumented.launch' for running the instrumented nodes (notice that now we added the 'remap' params fro creating the gap in the communication).
+The monitor will now check the events at runtime. But, since the property is always satisfied, no events will be filtered out. Changing the property you will be able to see that if the event is not consistent, it is not propagated to the subscriber node!
