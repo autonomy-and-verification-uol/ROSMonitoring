@@ -97,6 +97,15 @@ hello_str = "hello"
 ...
 ```
 
+The last thing to do is to add a launch file for running our nodes.
+Create a launch file called 'run.launch' inside the 'beginner_tutorials' folder, and paste the following XML inside it.
+```xml
+<launch>
+    <node pkg="beginner_tutorials" type="talker.py" name="talker" output="screen"/>
+    <node pkg="beginner_tutorials" type="listener.py" name="listener" output="screen"/>
+</launch>
+```
+
 Now we are ready to start monitoring our talker and listener nodes!
 
 ## Clone the ROSMonitoring repository
