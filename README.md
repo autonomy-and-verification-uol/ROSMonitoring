@@ -119,27 +119,33 @@ In the terminal:
 ```
 Now you should have your local ROSMonitoring folder.
 
-### Instrument talker and listener nodes
+### Create a simple monitor
 
-The first thing to do in order to monitor our nodes is to instrument them. Thanks to this step, our monitor will be able to intercept the topics of our interest (even though for now we have only the 'chatter' topic).
+The creation of a monitor is extremely flexible, and we can easily customize how many monitors, what they can do, and above all, what they are going to check (which topics, and so on).
+For customizing the monitors, we use a YAML configuration file. You can find different ones we already prepared for you for exploring ROSMonitoring in the Talker-Listener example.
 
-```bash
- $ cd ROSMonitoring/instrumentation/
-```
+The first we are going to see is: 'offline_config.yaml'
 
-Inside this folder you should find: config.yaml, generator, and generator.py.
-The Python program we are going to execute is generator. But, before doing that, we need to change the configuration file, config.yaml. This configuration file allows us to select which ROS project we want to instrument, and which topics we are interested in ('all' is the keyword for considering all the topics used by the nodes). If we are interested in checking only a subset of the topics used by our nodes, following the syntax of YAML, we can list all the topics one by one instead.
-We need to change <path_to_ROS_project> into ~/catkin_ws/src/beginner_tutorials
-We can leave the topics list as it is. Note that in this case we could remove the keyword all, and add chatter, without changing the final outcome.
-
-The new config.yaml file should look like this:
 ```yaml
-#config file for the instrumentation of ROS
-#this file is given in input to generator.py
+nodes: # here we list the nodes we are going to monitor
+  - node:
+      name: talker
+      package: beginner_tutorials
+      path: ~/catkin_ws/src/beginner_tutorials/run.launch
+  - node:
+      name: listener
+      package: beginner_tutorials
+      path: ~/catkin_ws/src/beginner_tutorials/run.launch
 
-ROS:
-  path: ~/catkin_ws/src/beginner_tutorials/scripts/
-  topics: all
+monitors: # here we list the monitors we are going to generate
+  - monitor:
+      id: monitor
+      log: ./log.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      topics: # the list of topics this monitor is going to intercept (only one here)
+        - name: chatter # name of the topic
+          type: std_msgs.msg.String # type of the topic
+          action: log # the monitor will log the messages exchanged on this topic 
 ```
 
 Now we are ready to execute the generator.
