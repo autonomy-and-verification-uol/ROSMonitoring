@@ -23,6 +23,16 @@
 # Config file for the instrumentation of ROS
 # this file is given in input to generator
 #
+nodes:
+  - node:
+      name: talker
+      package: rosmon
+      path: /home/angelo/catkin_ws1/src/rosmon/run.launch
+  - node:
+      name: listener
+      package: rosmon
+      path: /home/angelo/catkin_ws1/src/rosmon/run.launch
+
 monitors:
   - monitor:
       id: monitor_0
@@ -40,9 +50,11 @@ monitors:
         - name: count
           type: std_msgs.msg.Int32
           action: filter
-          side: subscriber
+          subscribers:
+            - listener
         - name: person
           type: rosmon.msg.Person
           action: filter
-          side: publisher
+          publishers:
+            - talker
           warning: True

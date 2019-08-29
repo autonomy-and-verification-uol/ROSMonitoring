@@ -1,0 +1,11 @@
+<launch>
+    <node name="talker" output="screen" pkg="rosmon" type="talker.py">
+      <remap from="person" to="person_mon" />
+    <remap from="person" to="person_mon" /></node>
+    <node name="listener" output="screen" pkg="rosmon" type="listener.py">
+      <remap from="count" to="count_mon" />
+    <remap from="count" to="count_mon" /></node>
+
+    
+
+</launch>

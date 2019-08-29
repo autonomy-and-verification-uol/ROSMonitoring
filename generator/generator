@@ -42,34 +42,59 @@ def main(argv):
     with open(args.config_file, 'r') as stream: # open the config file for the generator
         try:
             config = yaml.safe_load(stream) # load the config file
-            if 'monitors' in config: # check if the ROS key is present
+            nodes = {}
+            if 'nodes' in config: # check if there are nodes to be instrumented
+                for node in config['nodes']:
+                    if 'name' not in node['node'] or 'package' not in node['node'] or 'path' not in node['node']:
+                        print('For each node you have to give: name, package and path to its launch file.')
+                        return
+                    if node['node']['name'] in nodes:
+                        print('There cannot be two nodes with the same name.')
+                        return
+                    nodes[node['node']['name']] = (node['node']['package'], node['node']['path'], [])
+            if 'monitors' in config: # check if there are monitors to create
                 ids = []
                 for monitor in config['monitors']:
                     if 'id' not in monitor['monitor'] or 'topics' not in monitor['monitor'] or 'log' not in monitor['monitor']:
-                        print('Each monitor in the configuration file must contain the id, when, log and the list of the topics fields')
+                        print('Each monitor in the configuration file must contain the id, when, log and the list of the topics fields.')
                         return
                     if 'oracle' in monitor['monitor']  and ('port' not in monitor['monitor']['oracle'] or 'url' not in monitor['monitor']['oracle'] or 'action' not in monitor['monitor']['oracle']):
-                        print('Url, port and action must be specified inside the oracle')
+                        print('Url, port and action must be specified inside the oracle.')
                         return
                     for topic_with_types_and_action in monitor['monitor']['topics']:
                         if 'name' not in topic_with_types_and_action or 'type' not in topic_with_types_and_action or 'action' not in topic_with_types_and_action:
-                            print('Each topic needs a name, a type and an action')
+                            print('Each topic needs a name, a type and an action.')
                             return
                         if topic_with_types_and_action['action'] not in ['log', 'filter']:
-                            print('The actions available for the topics are: log, filter')
+                            print('The actions available for the topics are: log, filter.')
                             return
-                        if ('side' not in topic_with_types_and_action or 'oracle' not in monitor['monitor']) and topic_with_types_and_action['action'] == 'filter':
-                            print('In order to filter the wrong messages, the monitor has to be ONLINE and in the middle of the communication. To have this, the \'side\' and \'oracle\' fields have to be given')
+                        if (('publishers' not in topic_with_types_and_action and 'subscribers' not in topic_with_types_and_action) or 'oracle' not in monitor['monitor']) and topic_with_types_and_action['action'] == 'filter':
+                            print('In order to filter the wrong messages, the monitor has to be ONLINE and in the middle of the communication. To have this, the \'oracle\' field and the list of publishers (or subscribers) must be given.')
                             return
+                        if 'publishers' in topic_with_types_and_action and 'subscribers' in topic_with_types_and_action:
+                            print('The publishers and subscribers fileds are mutually exclusive. The instrumentation process affects only one side per time.')
+                            return
+                        if 'publishers' in topic_with_types_and_action:
+                            for publisher in topic_with_types_and_action['publishers']:
+                                if publisher not in nodes:
+                                    print('The publisher ' + publisher + ' has not been defined in the list of nodes.')
+                                    return
+                                nodes[publisher][2].append(topic_with_types_and_action['name'])
+                        if 'subscribers' in topic_with_types_and_action:
+                            for subscriber in topic_with_types_and_action['subscribers']:
+                                if subscriber not in nodes:
+                                    print('The subscriber ' + subscriber + ' has not been defined in the list of nodes.')
+                                    return
+                                nodes[subscriber][2].append(topic_with_types_and_action['name'])
                     if 'oracle' in monitor['monitor']:
                         url =  monitor['monitor']['oracle']['url']
                         port =  monitor['monitor']['oracle']['port']
                         oracle_action =  monitor['monitor']['oracle']['action']
                         if not isinstance(url, str) or not isinstance(port, int):
-                            print('url must be a string and port must be an integer')
+                            print('The url must be a string and port must be an integer.')
                             return
                         if oracle_action not in ['nothing', 'modify']:
-                            print('The actions available for the oracle are: nothing, modify')
+                            print('The actions available for the oracle are: nothing, modify.')
                             return
                     else:
                         url = None
@@ -82,6 +107,7 @@ def main(argv):
                         silent = False
                     create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent)
                 create_launch_file(ids)
+                instrument_launch_files(nodes)
         except yaml.YAMLError as exc:
             print(exc)
 

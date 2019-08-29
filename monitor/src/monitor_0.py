@@ -28,7 +28,7 @@ def callbackchatter(data):
     dict_msgs[dict['time']] = data
     ws_lock.release()
     rospy.loginfo('event propagated to oracle')
-pubcount = rospy.Publisher(name = 'count_mon', data_class = Int32, latch = True, queue_size = 1000)
+    pubcount = rospy.Publisher(name = 'count_mon', data_class = Int32, latch = True, queue_size = 1000)
 def callbackcount(data):
     global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
@@ -42,7 +42,7 @@ def callbackcount(data):
     dict_msgs[dict['time']] = data
     ws_lock.release()
     rospy.loginfo('event propagated to oracle')
-pubperson = rospy.Publisher(name = 'person', data_class = Person, latch = True, queue_size = 1000)
+    pubperson = rospy.Publisher(name = 'person', data_class = Person, latch = True, queue_size = 1000)
 def callbackperson(data):
     global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))

@@ -22,6 +22,7 @@
 
 import os
 import yaml
+import xml.etree.ElementTree as ET
 
 def create_monitor(monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent): # function which creates the python ROS monitor
     with open('../monitor/src/' + monitor_id + '.py', 'w') as monitor: # the monitor code will be in monitor.py
@@ -51,17 +52,13 @@ from {p} import {t}'''.format(p = package, t = type)
     # write the creation of the publisher for each topic (and the callback function for the instrumented one)
         pub_with_callbacks = '\n'
         for topic_with_types_and_action in topics_with_types_and_action:
-            if 'side' in topic_with_types_and_action and topic_with_types_and_action['side'] == 'subscriber':
-                tp_side = topic_with_types_and_action['name'] + '_mon'
-            else:
-                tp_side = topic_with_types_and_action['name']
-            if 'side' in topic_with_types_and_action:
-                if topic_with_types_and_action['side'] == 'subscriber':
+            if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
+                if 'subscribers' in topic_with_types_and_action:
                     tp_side = topic_with_types_and_action['name'] + '_mon'
                 else:
                     tp_side = topic_with_types_and_action['name']
                 pub_with_callbacks += '''
-pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
+    pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
             pub_with_callbacks += '''
 def callback{tp}(data):
     global ws, ws_lock'''.format(tp = topic_with_types_and_action['name'])
@@ -95,7 +92,7 @@ def callback{tp}(data):
                 if not silent:
                     pub_with_callbacks += '''
     rospy.loginfo('event has been successfully logged')'''
-                if 'side' in topic_with_types_and_action:
+                if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
                     pub_with_callbacks += '''
     pub_dict['{tp}'].publish(data)'''.format(tp = topic_with_types_and_action['name'])
     # write the dictionary for dynamically keeping track of the publishers
@@ -105,7 +102,7 @@ pub_dict = {'''
         first_time = True
         for topic_with_types_and_action in topics_with_types_and_action:
         #for (topic, (type, _), _, _, _, _, _) in topics_with_types:
-            if 'side' in topic_with_types_and_action:
+            if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
                 if(first_time):
                     first_time = False
                 else:
@@ -141,11 +138,10 @@ def monitor():
     rospy.init_node('monitor', anonymous=True)
     pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)'''
         for topic_with_types_and_action in topics_with_types_and_action:
-            if 'side' in topic_with_types_and_action:
-                if topic_with_types_and_action['side'] == 'subscriber':
-                    tp_side = topic_with_types_and_action['name']
-                else:
-                    tp_side = topic_with_types_and_action['name'] + '_mon'
+            if 'subscribers' in topic_with_types_and_action:
+                tp_side = topic_with_types_and_action['name']
+            elif 'publishers' in topic_with_types_and_action:
+                tp_side = topic_with_types_and_action['name'] + '_mon'
             else:
                 tp_side = topic_with_types_and_action['name']
             monitor_def += '''
@@ -304,3 +300,26 @@ def create_launch_file(monitor_ids):
 </launch>
         '''
         launch_file.write(str)
+
+# instrument the launch files through adding/removing remap params
+def instrument_launch_files(nodes):
+    if not nodes: return
+    launch_files = {}
+    for name in nodes:
+        (package, path, topics) = nodes[name]
+        if path not in launch_files:
+            launch_files[path] = []
+        launch_files[path].append((name, package, topics))
+    for path in launch_files:
+        file_name = path.replace('.launch', '_instrumented.launch')
+        tree = ET.parse(path)
+        launch = tree.getroot()
+        for node in launch.findall('node'):
+            for (name, package, topics) in launch_files[path]:
+                if node.get('name') == name and node.get('pkg') == package:
+                    for topic in topics:
+                        remap = ET.SubElement(node, 'remap')
+                        remap.set('from', topic)
+                        remap.set('to', topic + '_mon')
+                    break
+        tree.write(file_name)
