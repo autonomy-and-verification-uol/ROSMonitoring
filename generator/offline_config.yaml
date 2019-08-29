@@ -23,38 +23,22 @@
 # Config file for the instrumentation of ROS
 # this file is given in input to generator
 #
-nodes:
+nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
-      package: rosmon
-      path: /home/angelo/catkin_ws1/src/rosmon/run.launch
+      package: beginner_tutorials
+      path: home/user/catkin_ws/src/beginner_tutorials/run.launch
   - node:
       name: listener
-      package: rosmon
-      path: /home/angelo/catkin_ws1/src/rosmon/run.launch
+      package: beginner_tutorials
+      path: home/user/catkin_ws/src/beginner_tutorials/run.launch
 
-monitors:
+monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: monitor_0
-      log: ./log_0.txt # file where the monitor will log the observed events
-      silent: False
-      oracle: # the oracle running and ready to check the specification
-        port: 8080 # the port where it is listening
-        url: 127.0.0.1 # the url where it is listening
-        action: nothing # the oracle will not change the message
-      topics:
-        - name: chatter
-          type: std_msgs.msg.String
-          action: log
-          warning: True
-        - name: count
-          type: std_msgs.msg.Int32
-          action: filter
-          subscribers:
-            - listener
-        - name: person
-          type: rosmon.msg.Person
-          action: filter
-          publishers:
-            - talker
-          warning: True
+      id: monitor
+      log: ./log.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      topics: # the list of topics this monitor is going to intercept (only one here)
+        - name: chatter # name of the topic
+          type: std_msgs.msg.String # type of the topic
+          action: log # the monitor will log the messages exchanged on this topic
