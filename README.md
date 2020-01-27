@@ -345,6 +345,8 @@ ROSMonitoring project is released under MIT license
 
     Copyright 2018 Hiroki Ohtani. (BSD License)
  - rospy_message_converter (https://github.com/uos/rospy_message_converter)
+
     Copyright (c) 2013, Willow Garage, Inc. (BSD License)
  - python-websocket-server (https://github.com/Pithikos/python-websocket-server)
+
     Copyright (c) 2018 Johan Hanssen Seferidis (MIT License)
