@@ -107,4 +107,4 @@ venv.bak/
 *.pyc
 
 # evaluation folder
-./evaluation
+# ./evaluation
