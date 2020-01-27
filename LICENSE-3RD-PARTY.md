@@ -1,5 +1,6 @@
 -----------------------------------------------------------------------------
 The BSD License (BSD)
+
         applies to: 
         - websocket_client Copyright 2018 Hiroki Ohtani
         - rospy_message_converter Copyright (c) 2013, Willow Garage, Inc.
@@ -17,6 +18,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 -----------------------------------------------------------------------------
 The Mozilla Public License Version 2.0 (MPLv2.0)
+
         applies to: 
         - reelay Copyright (c) 2019 Dogan Ulus
         - RML Copyright (c) 2019 RMLatDIBRIS
@@ -222,6 +224,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
 -----------------------------------------------------------------------------
 The MIT License (MIT)
+
         applies to: 
         - python-websocket-server Copyright (c) 2018 Johan Hanssen Seferidis
 -----------------------------------------------------------------------------
