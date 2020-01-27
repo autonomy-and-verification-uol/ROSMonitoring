@@ -353,3 +353,6 @@ ROSMonitoring project is released under MIT license
  - reelay (https://github.com/doganulus/reelay)
 
     Copyright (c) 2019 Dogan Ulus (Mozilla Public License Version 2.0)
+ - RML (https://github.com/RMLatDIBRIS)
+
+    Copyright (c) 2019 RMLatDIBRIS (Mozilla Public License Version 2.0)
