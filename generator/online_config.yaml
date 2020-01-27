@@ -27,15 +27,15 @@ nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
       package: beginner_tutorials
-      path: /home/user/catkin_ws/src/beginner_tutorials/run.launch
+      path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
   - node:
       name: listener
       package: beginner_tutorials
-      path: /home/user/catkin_ws/src/beginner_tutorials/run.launch
+      path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: monitor
+      id: monitor0
       log: ./log.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
       oracle: # the oracle running and ready to check the specification (localhost in this case)

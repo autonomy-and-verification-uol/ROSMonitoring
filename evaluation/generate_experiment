@@ -9,7 +9,7 @@ def generate_launch_file(n_monitors, topics_for_node):
     text = '''<launch>'''
     for (node, topics_to_pub, topics_to_sub) in topics_for_node:
         text += '''
-    <node pkg="rosmon" type="{name}.py" name="{name}" output="screen">'''.format(name = node)
+    <node pkg="beginner_tutorials" type="{name}.py" name="{name}" output="screen">'''.format(name = node)
         if n_monitors != 0:
             for pub in topics_to_pub:
                 text += '''
@@ -22,7 +22,7 @@ def generate_launch_file(n_monitors, topics_for_node):
     text +='''
 </launch>
     '''
-    with open('/home/angelo/catkin_ws1/src/rosmon/run.launch', 'w') as file:
+    with open('/home/angelo/catkin_ws1/src/beginner_tutorials/run.launch', 'w') as file:
         file.write(text)
 
 def generate_node(name, topics_to_pub, topics_to_sub, target):
@@ -50,17 +50,38 @@ def generate_node(name, topics_to_pub, topics_to_sub, target):
 # SOFTWARE.
 
 import rospy
-from std_msgs.msg import String
+from std_msgs.msg import Float64
 from threading import *
 import time
+from monitor.msg import *
+from beginner_tutorials.srv import *
 
 my_lock = Lock()
 count = 0
+count_error = 0
+avg_latency = None
+avg_latency_error = None
 
 def callback(data):
     global count
+    global avg_latency
     with my_lock:
         count += 1
+        if avg_latency:
+            avg_latency = (rospy.get_time() - data.data + avg_latency) / count
+        else:
+            avg_latency = rospy.get_time() - data.data
+
+def callback_error(data):
+    global count_error
+    global avg_latency_error
+    with my_lock:
+        count_error += 1
+        if avg_latency_error:
+            avg_latency_error = (rospy.get_time() - data.time + avg_latency_error) / count_error
+        else:
+            avg_latency_error = rospy.get_time() - data.time
+
 
 def node():
     global start_time, count
@@ -68,32 +89,44 @@ def node():
     '''.format(node = name, tg = target)
     for topic_to_pub in topics_to_pub:
         text +='''
-    pub_{tp} = rospy.Publisher(name = '{tp}', data_class = String, queue_size=1000, latch = True)'''.format(tp = topic_to_pub)
+    pub_{tp} = rospy.Publisher(name = '{tp}', data_class = Float64, queue_size=1000, latch = True)'''.format(tp = topic_to_pub)
+    text += '''
+    rospy.Subscriber('monitor_error', MonitorError, callback_error)
+    send_time = rospy.ServiceProxy('send_time', SendTime)'''
     for topic_to_sub in topics_to_sub:
         text +='''
-    rospy.Subscriber('{tp}', String, callback)'''.format(tp = topic_to_sub)
+    rospy.Subscriber('{tp}', Float64, callback)'''.format(tp = topic_to_sub)
     text +='''
-    rate = rospy.Rate(100)
+    rate = rospy.Rate(1000)
     rospy.sleep(5)
     start_time = rospy.get_time()
-    while not rospy.is_shutdown() and count <= {tg}:
-        hello_str = "hello"'''.format(tg = target)
+    sent = False
+    while not rospy.is_shutdown():
+        if count >= {tg} and not sent:
+            send_time((rospy.get_time() - start_time), avg_latency, avg_latency_error)
+            sent = True
+        custom_msg = rospy.get_time()'''.format(tg = target)
     for topic_to_pub in topics_to_pub:
         text +='''
-        pub_{tp}.publish(hello_str)
+        pub_{tp}.publish(custom_msg)
         '''.format(tp = topic_to_pub)
     text += '''
         rate.sleep()
-    rospy.loginfo('{node} finished in: ' + str((rospy.get_time() - start_time)))
+    #with open('log.txt', 'a+') as log_file:
+    #    log_file.write('{node} finished in: ' + str((rospy.get_time() - start_time)) + '\\n')
+    #    log_file.write('{node} avg latency: ' + str(avg_latency) + '\\n')
+    #    log_file.write('{node} avg latency error: ' + str(avg_latency_error) + '\\n')
+    #rospy.loginfo('{node} finished in: ' + str((rospy.get_time() - start_time)))
+    #rospy.loginfo('{node} avg latency: ' + str(avg_latency))
 if __name__ == '__main__':
     try:
         node()
     except rospy.ROSInterruptException:
         pass
     '''.format(node = name)
-    with open('/home/angelo/catkin_ws1/src/rosmon/scripts/' + name + '.py', 'w') as file:
+    with open('/home/angelo/catkin_ws1/src/beginner_tutorials/scripts/' + name + '.py', 'w') as file:
         file.write(text)
-    os.system('chmod +x /home/angelo/catkin_ws1/src/rosmon/scripts/' + name + '.py')
+    os.system('chmod +x /home/angelo/catkin_ws1/src/beginner_tutorials/scripts/' + name + '.py')
 
 def generate_nodes(n_nodes, n_topics, target):
     topics = {'topic_' + str(i) for i in range(n_topics)}
@@ -135,30 +168,43 @@ def generate_monitors_yaml_file(n_monitors, topics_for_node):
 # Config file for the instrumentation of ROS
 # this file is given in input to generator
 #
+nodes:'''
+    for (node, _, _) in topics_for_node:
+        text += '''
+    - node:
+        name: {n}
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch'''.format(n = node)
+    text += '''
 monitors:'''
-    topics_for_monitor = [('monitor_'+str(i), set()) for i in range(n_monitors)]
+    topics_for_monitor = [('monitor_'+str(i), []) for i in range(n_monitors)]
     j = 0
     for (node, topics_to_pub, topics_to_sub) in topics_for_node:
-        topics_for_monitor[j][1].update(topics_to_pub)
+        topics_for_monitor[j][1].append((node, topics_to_pub))
         j = (j + 1) % n_monitors
     port = 8080
-    for (monitor, topics) in topics_for_monitor:
+    for (monitor, topics_nodes) in topics_for_monitor:
         text += '''
     - monitor:
         id: {id}
         log: ./log_{id}.txt # file where the monitor will log the observed events
+        silent: True
         oracle: # the oracle running and ready to check the specification
             port: {p} # the port where it is listening
             url: 127.0.0.1 # the url where it is listening
+            action: nothing
         topics:'''.format(id = monitor, p = port)
         port += 1
-        for topic in topics:
-            text +='''
+        for (node, topics) in topics_nodes:
+            for topic in topics:
+                text +='''
             - name: {tp}
-              type: std_msgs.msg.String
+              type: std_msgs.msg.Float64
               action: log
-              warning: False
-              side: publisher'''.format(tp = topic)
+              warning: True
+              publishers:'''.format(tp = topic)
+            text += '''
+                - {n}'''.format(n = node)
     with open('../generator/config_eval.yaml', 'w') as file:
         file.write(text)
 
@@ -167,6 +213,7 @@ def generate_experiment(n_nodes, n_topics, n_monitors, target):
     if n_monitors != 0:
         generate_monitors_yaml_file(n_monitors, topics_for_node)
     generate_launch_file(n_monitors, topics_for_node)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='this is a Python program to generate a test experiment for evaluating the delays produced by ROSMon',

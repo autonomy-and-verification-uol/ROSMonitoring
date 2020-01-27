@@ -44,9 +44,12 @@ dict_msgs = {}
             '''
     # write the imports for the msg types used by the monitor (extracted by the previous instrumentation)
         msg_type_imports = ''
+        msg_import_set = set()
         for topic_with_types_and_action in topics_with_types_and_action:
             package = topic_with_types_and_action['type'][0:topic_with_types_and_action['type'].rfind('.')]
             type = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:]
+            msg_import_set.update([(package, type)])
+        for (package, type) in msg_import_set:
             msg_type_imports += '''
 from {p} import {t}'''.format(p = package, t = type)
     # write the creation of the publisher for each topic (and the callback function for the instrumented one)
@@ -58,7 +61,7 @@ from {p} import {t}'''.format(p = package, t = type)
                 else:
                     tp_side = topic_with_types_and_action['name']
                 pub_with_callbacks += '''
-    pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
+pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
             pub_with_callbacks += '''
 def callback{tp}(data):
     global ws, ws_lock'''.format(tp = topic_with_types_and_action['name'])
@@ -173,7 +176,7 @@ def on_message(ws, message):
             error.property = json_dict['spec']'''
             if oracle_action == 'nothing':
                 other_callbacks += '''
-            error.content = dict_msgs[json_dict['time']]'''
+            error.content = str(dict_msgs[json_dict['time']])'''
             else:
                 other_callbacks += '''
             json_dict_copy = json_dict.copy()

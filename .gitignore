@@ -105,3 +105,6 @@ venv.bak/
 
 # generated files
 *.pyc
+
+# evaluation folder
+./evaluation
