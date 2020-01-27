@@ -335,10 +335,15 @@ $ ./oracle.py --online --port 8080
 ```
 In this way, the Python oracle will start listening on the 8080 port. Each message observed on this connection will be passed to Reelay and checked against the property defined in property.py.
 
-# About:
+# License:
 ROSMonitoring project is released under MIT license
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Third-party libraries licenses:
- - websocket_client (https://pypi.org/project/websocket_client/) - Copyright 2018 Hiroki Ohtani. (BSD License)
- - rospy_message_converter (https://github.com/uos/rospy_message_converter) - Copyright (c) 2013, Willow Garage, Inc. (BSD License)
- - python-websocket-server (https://github.com/Pithikos/python-websocket-server) - Copyright (c) 2018 Johan Hanssen Seferidis (MIT License)
+ - websocket_client (https://pypi.org/project/websocket_client/)
+    Copyright 2018 Hiroki Ohtani. (BSD License)
+ - rospy_message_converter (https://github.com/uos/rospy_message_converter)
+    Copyright (c) 2013, Willow Garage, Inc. (BSD License)
+ - python-websocket-server (https://github.com/Pithikos/python-websocket-server)
+    Copyright (c) 2018 Johan Hanssen Seferidis (MIT License)
