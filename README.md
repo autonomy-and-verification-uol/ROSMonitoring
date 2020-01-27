@@ -343,10 +343,13 @@ ROSMonitoring project is released under MIT license
 ## Third-party libraries licenses:
  - websocket_client (https://pypi.org/project/websocket_client/)
 
-    Copyright 2018 Hiroki Ohtani. (BSD License)
+    Copyright 2018 Hiroki Ohtani (BSD License)
  - rospy_message_converter (https://github.com/uos/rospy_message_converter)
 
     Copyright (c) 2013, Willow Garage, Inc. (BSD License)
  - python-websocket-server (https://github.com/Pithikos/python-websocket-server)
 
     Copyright (c) 2018 Johan Hanssen Seferidis (MIT License)
+ - reelay (https://github.com/doganulus/reelay)
+
+    Copyright (c) 2019 Dogan Ulus (Mozilla Public License Version 2.0)
