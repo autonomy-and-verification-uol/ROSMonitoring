@@ -1,3 +1,5 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # ROSMonitoring
 
 ROSMonitoring is a framework developed for verifying at runtime the messages exchanged in a ROS system.
