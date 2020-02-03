@@ -50,9 +50,9 @@ manage_event(WebSocket) :-
          %writeln(E),
 	       nb_getval(state,TE1),
          % for experiments
-         %random(R),
-         %((R < 0.7) -> (next(TE1,E,TE2), nb_setval(state,TE2), Reply=E);(term_string(TE1, TE1Str), Reply=(_{}.put(E).put(_{error:true, spec:TE1Str})))),
-	       (next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=E; term_string(TE1, TE1Str), Reply=(_{}.put(E).put(_{error:true, spec:TE1Str}))),
+         random(R),
+         ((R < 0.7) -> (next(TE1,E,TE2), nb_setval(state,TE2), Reply=E);(term_string(TE1, TE1Str), Reply=(_{}.put(E).put(_{error:true, spec:TE1Str})))),
+	       %(next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=E; term_string(TE1, TE1Str), Reply=(_{}.put(E).put(_{error:true, spec:TE1Str}))),
 	       atom_json_dict(Json,Reply,[as(string)]),
 	       ws_send(WebSocket, string(Json)),
 	       manage_event(WebSocket)).

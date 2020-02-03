@@ -1,0 +1,218 @@
+
+# MIT License
+#
+# Copyright (c) [2019] [Angelo Ferrando]
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# Config file for the instrumentation of ROS
+# this file is given in input to generator
+#
+nodes:
+    - node:
+        name: node_0
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_1
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_2
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_3
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_4
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_5
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_6
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_7
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_8
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+    - node:
+        name: node_9
+        package: beginner_tutorials
+        path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+monitors:
+    - monitor:
+        id: monitor_0
+        log: ./log_monitor_0.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8080 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_0
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_0
+    - monitor:
+        id: monitor_1
+        log: ./log_monitor_1.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8081 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_1
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_1
+    - monitor:
+        id: monitor_2
+        log: ./log_monitor_2.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8082 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_2
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_2
+    - monitor:
+        id: monitor_3
+        log: ./log_monitor_3.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8083 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_3
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_3
+    - monitor:
+        id: monitor_4
+        log: ./log_monitor_4.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8084 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_4
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_4
+    - monitor:
+        id: monitor_5
+        log: ./log_monitor_5.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8085 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_5
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_5
+    - monitor:
+        id: monitor_6
+        log: ./log_monitor_6.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8086 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_6
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_6
+    - monitor:
+        id: monitor_7
+        log: ./log_monitor_7.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8087 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_7
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_7
+    - monitor:
+        id: monitor_8
+        log: ./log_monitor_8.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8088 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_8
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_8
+    - monitor:
+        id: monitor_9
+        log: ./log_monitor_9.txt # file where the monitor will log the observed events
+        silent: True
+        oracle: # the oracle running and ready to check the specification
+            port: 8089 # the port where it is listening
+            url: 127.0.0.1 # the url where it is listening
+            action: nothing
+        topics:
+            - name: topic_9
+              type: std_msgs.msg.Float64
+              action: log
+              warning: True
+              publishers:
+                - node_9
