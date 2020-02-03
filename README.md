@@ -18,6 +18,7 @@ Using pip we can then install the Python libraries we need.
 ```bash
 $ pip install websocket_client
 $ pip install rospy_message_converter
+$ pip install pyyaml
 ```
 
 ## Prolog (http://www.swi-prolog.org/build/PPA.html):
