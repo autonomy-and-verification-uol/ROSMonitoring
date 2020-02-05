@@ -35,8 +35,8 @@ nodes: # here we list the nodes we are going to monitor
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: monitor0
-      log: ./log.txt # file where the monitor will log the observed events
+      id: monitor_0
+      log: home/user/catkin_ws/log.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
       oracle: # the oracle running and ready to check the specification (localhost in this case)
         port: 8080 # the port where it is listening
