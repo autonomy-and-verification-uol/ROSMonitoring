@@ -27,11 +27,11 @@ nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
       package: beginner_tutorials
-      path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+      path: /home/user/catkin_ws/src/beginner_tutorials/run.launch
   - node:
       name: listener
       package: beginner_tutorials
-      path: /home/angelo/catkin_ws1/src/beginner_tutorials/run.launch
+      path: /home/user/catkin_ws/src/beginner_tutorials/run.launch
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
