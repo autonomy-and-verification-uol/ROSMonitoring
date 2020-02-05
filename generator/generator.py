@@ -92,6 +92,8 @@ def callback{tp}(data):
             else:
                 pub_with_callbacks += '''
     logging(dict)'''
+		pub_with_callbacks += '''
+    ws_lock.release()'''
                 if not silent:
                     pub_with_callbacks += '''
     rospy.loginfo('event has been successfully logged')'''
