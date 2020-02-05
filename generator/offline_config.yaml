@@ -35,7 +35,7 @@ nodes: # here we list the nodes we are going to monitor
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: monitor0
+      id: monitor_0
       log: home/user/catkin_ws/log.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
       topics: # the list of topics this monitor is going to intercept (only one here)
