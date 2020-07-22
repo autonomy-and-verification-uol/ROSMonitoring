@@ -61,10 +61,10 @@ from {p} import {t}'''.format(p = package, t = type)
                 else:
                     tp_side = topic_with_types_and_action['name']
                 pub_with_callbacks += '''
-pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
+pub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = topic_with_types_and_action['name'].replace('/','_'), tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
             pub_with_callbacks += '''
 def callback{tp}(data):
-    global ws, ws_lock'''.format(tp = topic_with_types_and_action['name'])
+    global ws, ws_lock'''.format(tp = topic_with_types_and_action['name'].replace('/','_'))
             if not silent:
                 pub_with_callbacks += '''
     rospy.loginfo('monitor has observed: ' + str(data))'''
@@ -111,7 +111,7 @@ pub_dict = {'''
                 else:
                     pub_dict += ', '
                 pub_dict += '''
-    '{tp}' : pub{tp}'''.format(tp = topic_with_types_and_action['name'])
+    '{tp1}' : pub{tp2}'''.format(tp1 = topic_with_types_and_action['name'], tp2 = topic_with_types_and_action['name'].replace('/','_'))
         pub_dict += '''
 }
         '''
@@ -148,7 +148,7 @@ def monitor():
             else:
                 tp_side = topic_with_types_and_action['name']
             monitor_def += '''
-    rospy.Subscriber('{tps}', {ty}, callback{tp})'''.format(tp = topic_with_types_and_action['name'], tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
+    rospy.Subscriber('{tps}', {ty}, callback{tp})'''.format(tp = topic_with_types_and_action['name'].replace('/','_'), tps = tp_side, ty = topic_with_types_and_action['type'][topic_with_types_and_action['type'].rfind('.')+1:])
         if not silent:
             monitor_def += '''
     rospy.loginfo('monitor started and ready')

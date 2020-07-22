@@ -1,25 +1,7 @@
 
 <launch>
         
-<node pkg="monitor" type="monitor_0.py" name="monitor_0" output="screen"/>
-            
-<node pkg="monitor" type="monitor_1.py" name="monitor_1" output="screen"/>
-            
-<node pkg="monitor" type="monitor_2.py" name="monitor_2" output="screen"/>
-            
-<node pkg="monitor" type="monitor_3.py" name="monitor_3" output="screen"/>
-            
-<node pkg="monitor" type="monitor_4.py" name="monitor_4" output="screen"/>
-            
-<node pkg="monitor" type="monitor_5.py" name="monitor_5" output="screen"/>
-            
-<node pkg="monitor" type="monitor_6.py" name="monitor_6" output="screen"/>
-            
-<node pkg="monitor" type="monitor_7.py" name="monitor_7" output="screen"/>
-            
-<node pkg="monitor" type="monitor_8.py" name="monitor_8" output="screen"/>
-            
-<node pkg="monitor" type="monitor_9.py" name="monitor_9" output="screen"/>
+<node pkg="monitor" type="monitor_human_operator_1.py" name="monitor_human_operator_1" output="screen"/>
             
 </launch>
         
