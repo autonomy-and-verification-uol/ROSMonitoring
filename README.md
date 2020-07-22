@@ -162,7 +162,7 @@ nodes: # here we list the nodes we are going to monitor
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: monitor
+      id: monitor_0
       log: ./log.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
       topics: # the list of topics this monitor is going to intercept (only one here)
@@ -181,7 +181,7 @@ $ chmod +x generator
 $ ./generator --config_file offline_config.yaml
 ```
 
-Going back to the 'ROSMonitoring' folder, if we look into the 'monitor/src/' folder, we will find a new generated Python script called 'monitor.py'. This file contains the code for the monitor.
+Going back to the 'ROSMonitoring' folder, if we look into the 'monitor/src/' folder, we will find a new generated Python script called 'monitor_0.py'. This file contains the code for the monitor.
 Inside 'beginner_tutorials' we can also find now a new launch file called 'run_instrumented.launch'.
 
 Now, if we want to run our ROS nodes with the new monitor together, we have to just copy the monitor folder under 'catkin_ws/src'. Since we are adding a new ROS package (the monitor package), we need also to re-run the catkin_make command.
@@ -192,6 +192,7 @@ In a terminal we do:
 
 ```bash
 $ cd ~/catkin_ws/
+$ chmod +x src/monitor/src/monitor_0.py
 $ roslaunch src/monitor/run.launch
 ```
 
@@ -199,7 +200,6 @@ Then, in another terminal we do:
 
 ```bash
 $ cd ~/catkin_ws/
-$ chmod +x src/monitor/src/monitor.py
 $ roslaunch src/beginner_tutorials/run_instrumented.launch
 ```
 
@@ -273,7 +273,7 @@ nodes: # here we list the nodes we are going to monitor
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: monitor
+      id: monitor_0
       log: ./log.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
       oracle: # the oracle running and ready to check the specification (localhost in this case)
