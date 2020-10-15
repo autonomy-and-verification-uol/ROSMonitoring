@@ -36,6 +36,7 @@ import websocket
 from threading import *
 from rospy_message_converter import message_converter
 from monitor.msg import *
+from std_msgs.msg import String
 
 ws_lock = Lock()'''
         if oracle_action == 'nothing':
@@ -137,11 +138,12 @@ msg_dict = {'''
     # to the usual Subscribers
         monitor_def = '''
 def monitor():
-    global pub_error
+    global pub_error, pub_verdict
     with open(log, 'w') as log_file:
         log_file.write('')
     rospy.init_node('monitor', anonymous=True)
-    pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)'''
+    pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
+    pub_verdict = rospy.Publisher(name = 'monitor_verdict', data_class = String, latch = True, queue_size = 1000)'''
         for topic_with_types_and_action in topics_with_types_and_action:
             if 'subscribers' in topic_with_types_and_action:
                 tp_side = topic_with_types_and_action['name']
@@ -159,23 +161,49 @@ def monitor():
     # when a topic is observed by the monitor, if we are doing online RV, it propagates the topic to the
     # oracle. The oracle checks the event and returns the outcome to the monitor
     # the monitor then propagates the event to the other nodes (unless we decided to filter the errors,
-    # in that case the monitor does not propagate teh event)
+    # in that case the monitor does not propagate the event)
         if url != None and port != None:
             other_callbacks = '''
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
-    if 'error' in json_dict:
-        logging(json_dict)'''
+    if json_dict['verdict'] == 'true' or json_dict['verdict'] == 'currently_true' or json_dict['verdict'] == 'unknown':
+        if json_dict['verdict'] == 'true' and not pub_dict:
+            rospy.loginfo('The monitor concluded the satisfaction of the property under analysis, and can be safely removed.')
+            ws.close()
+            exit(0)
+        else:
+            logging(json_dict)
+            topic = json_dict['topic']'''
             if not silent:
                 other_callbacks += '''
-        rospy.loginfo('The event ' + message + ' is inconsistent..')'''
+            rospy.loginfo('The event ' + message + ' is consistent and republished')'''
+            if oracle_action == 'nothing':
+                other_callbacks += '''
+            if topic in pub_dict:
+                pub_dict[topic].publish(dict_msgs[json_dict['time']])
+            del dict_msgs[json_dict['time']]'''
+            else:
+                other_callbacks += '''
+            del json_dict['topic']
+            del json_dict['time']
+            ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
+        	if topic in pub_dict:
+                pub_dict[topic].publish(ROS_message)
+            '''
             other_callbacks += '''
-        if actions[json_dict['topic']][1]:
-            error = MonitorError()
-            error.topic = json_dict['topic']
-            error.time = json_dict['time']
-            error.property = json_dict['spec']'''
+    else:
+        logging(json_dict)
+        if json_dict['verdict'] == 'false':'''
+            if not silent:
+                other_callbacks += '''
+            rospy.loginfo('The event ' + message + ' is inconsistent..')'''
+            other_callbacks += '''
+            if actions[json_dict['topic']][1]:
+                error = MonitorError()
+                error.topic = json_dict['topic']
+                error.time = json_dict['time']
+                error.property = json_dict['spec']'''
             if oracle_action == 'nothing':
                 other_callbacks += '''
             error.content = str(dict_msgs[json_dict['time']])'''
@@ -189,7 +217,13 @@ def on_message(ws, message):
             error.content = json.dumps(json_dict_copy)'''
             other_callbacks += '''
             pub_error.publish(error)
+            if not pub_dict:
+                rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
+                ws.close()
+                exit(0)
         if actions[json_dict['topic']][0] != 'filter':
+            if json_dict['verdict'] == 'currently_false':
+                rospy.loginfo('The event ' + message + ' is consistent ')
             topic = json_dict['topic']'''
             if oracle_action == 'nothing':
                 other_callbacks += '''
@@ -206,27 +240,10 @@ def on_message(ws, message):
             if topic in pub_dict:
                 pub_dict[topic].publish(ROS_message)'''
             other_callbacks += '''
-    	error = True
-    else:
-        logging(json_dict)
-        topic = json_dict['topic']'''
-            if not silent:
-                other_callbacks += '''
-    	rospy.loginfo('The event ' + message + ' is consistent and republished')'''
-            if oracle_action == 'nothing':
-                other_callbacks += '''
-        if topic in pub_dict:
-            pub_dict[topic].publish(dict_msgs[json_dict['time']])
-        del dict_msgs[json_dict['time']]'''
-            else:
-                other_callbacks += '''
-        del json_dict['topic']
-        del json_dict['time']
-        ROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)
-    	if topic in pub_dict:
-            pub_dict[topic].publish(ROS_message)
-        '''
+    	error = True'''
             other_callbacks += '''
+    pub_verdict.publish(json_dict['verdict'])
+
 def on_error(ws, error):
     rospy.loginfo(error)
 

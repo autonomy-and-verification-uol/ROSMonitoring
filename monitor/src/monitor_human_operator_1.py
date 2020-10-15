@@ -7,17 +7,18 @@ import websocket
 from threading import *
 from rospy_message_converter import message_converter
 from monitor.msg import *
+from std_msgs.msg import String
 
 ws_lock = Lock()
 dict_msgs = {}
             
 from nist_gear.msg import Snapshot
 
-def callback_monitor_snapshot_1(data):
+def callbacksnapshot(data):
     global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = '/monitor/snapshot_1'
+    dict['topic'] = 'snapshot'
     dict['time'] = rospy.get_time()
     ws_lock.acquire()
     while dict['time'] in dict_msgs:
@@ -31,44 +32,59 @@ pub_dict = {
 }
         
 msg_dict = {
-    '/monitor/snapshot_1' : "nist_gear/Snapshot"
+    'snapshot' : "nist_gear/Snapshot"
 }
         
 def monitor():
-    global pub_error
+    global pub_error, pub_verdict
     with open(log, 'w') as log_file:
         log_file.write('')
     rospy.init_node('monitor', anonymous=True)
     pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
-    rospy.Subscriber('/monitor/snapshot_1', Snapshot, callback_monitor_snapshot_1)
+    pub_verdict = rospy.Publisher(name = 'monitor_verdict', data_class = String, latch = True, queue_size = 1000)
+    rospy.Subscriber('snapshot', Snapshot, callbacksnapshot)
     rospy.loginfo('monitor started and ready')
         
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
-    if 'error' in json_dict:
+    if json_dict['verdict'] == 'true' or json_dict['verdict'] == 'currently_true' or json_dict['verdict'] == 'unknown':
+        if json_dict['verdict'] == 'true' and not pub_dict:
+            rospy.loginfo('The monitor concluded the satisfaction of the property under analysis, and can be safely removed.')
+            ws.close()
+            exit(0)
+        else:
+            logging(json_dict)
+            topic = json_dict['topic']
+            rospy.loginfo('The event ' + message + ' is consistent and republished')
+            if topic in pub_dict:
+                pub_dict[topic].publish(dict_msgs[json_dict['time']])
+            del dict_msgs[json_dict['time']]
+    else:
         logging(json_dict)
-        rospy.loginfo('The event ' + message + ' is inconsistent..')
-        if actions[json_dict['topic']][1]:
-            error = MonitorError()
-            error.topic = json_dict['topic']
-            error.time = json_dict['time']
-            error.property = json_dict['spec']
+        if json_dict['verdict'] == 'false':
+            rospy.loginfo('The event ' + message + ' is inconsistent..')
+            if actions[json_dict['topic']][1]:
+                error = MonitorError()
+                error.topic = json_dict['topic']
+                error.time = json_dict['time']
+                error.property = json_dict['spec']
             error.content = str(dict_msgs[json_dict['time']])
             pub_error.publish(error)
+            if not pub_dict:
+                rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
+                ws.close()
+                exit(0)
         if actions[json_dict['topic']][0] != 'filter':
+            if json_dict['verdict'] == 'currently_false':
+                rospy.loginfo('The event ' + message + ' is consistent ')
             topic = json_dict['topic']
             if topic in pub_dict:
                 pub_dict[topic].publish(dict_msgs[json_dict['time']])
             del dict_msgs[json_dict['time']]
     	error = True
-    else:
-        logging(json_dict)
-        topic = json_dict['topic']
-    	rospy.loginfo('The event ' + message + ' is consistent and republished')
-        if topic in pub_dict:
-            pub_dict[topic].publish(dict_msgs[json_dict['time']])
-        del dict_msgs[json_dict['time']]
+    pub_verdict.publish(json_dict['verdict'])
+
 def on_error(ws, error):
     rospy.loginfo(error)
 
@@ -88,10 +104,10 @@ def logging(json_dict):
 
 def main(argv):
     global log, actions, ws
-    log = '/home/angelo/ariac_ws/src/ARIAC/ariac_example/log.txt'
+    log = '/home/angelo/ariac_ws/src/monitor/log.txt'
     
     actions = {
-            '/monitor/snapshot_1' : ('log', False)
+            'snapshot' : ('log', False)
     }
     monitor()
     websocket.enableTrace(False)
