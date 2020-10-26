@@ -53,12 +53,12 @@ def client_left(client, server):
 # Called when a client sends a message
 def message_received(client, server, message):
 	message_dict = json.loads(message)
-    if check_event(message):
-        message_dict['verdict'] = 'currently_true'
-    else:
-        message_dict['verdict'] = 'currently_false'
-        message_dict['spec'] = property.PROPERTY
-    server.send_message(client, json.dumps(message_dict))
+	if check_event(message):
+		message_dict['verdict'] = 'currently_true'
+	else:
+		message_dict['verdict'] = 'currently_false'
+		message_dict['spec'] = property.PROPERTY
+	server.send_message(client, json.dumps(message_dict))
 
 # Function checking the event against the specification (it simply calls Reelay, nothing more)
 def check_event(event):

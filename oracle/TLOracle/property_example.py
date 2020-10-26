@@ -26,23 +26,26 @@ import oracle
 TYPE = oracle.TypeOfProperty.PMTL
 
 # MTL property to verify
-PROPERTY = "(once[0:5](not radiation_level_high))"
+PROPERTY = "(historically[0:5]((door_open) and not dow_suppressed) or (not chatter)) -> door_open_warning"
 # In this case is Past-MTL, but it can also be a Past-LTL or Past-STL
 
 # predicates used in the property (initialization for time 0)
 predicates = dict(
     time = 0,
-    radiation_level = 0,
-    radiation_level_high = False
+    door_open = False,
+    dow_suppressed = False,
+    door_open_warning = False,
+    chatter = False
 )
 # in here we can add all the predicates we are interested in.. Of course, we also need to define how to translate Json messages to predicates.
 
 # function to abstract a dictionary (obtained from Json message) into a list of predicates
 def abstract_message(message):
-    if message['value'] > 50.0:
-        predicates['radiation_level_high'] = True
-    else:
-        predicates['radiation_level_high'] = False
+    if message['topic'] in predicates:
+        if isinstance(message['data'], bool):
+            predicates[message['topic']] = message['data']
+        else:
+            predicates[message['topic']] = False
     predicates['time'] = int(message['time'])
     return predicates
 # This function has to be defined by the user depending on the property defined.
@@ -50,4 +53,4 @@ def abstract_message(message):
 # updates the predicates if it finds the topic in the list of predicates.
 # Since the property is defined on predicates, we need this function to update the
 # predicates each time a message is observed. This abstraction of course is totally
-# dependent on the specific application.
+# dependent on the specific application. 

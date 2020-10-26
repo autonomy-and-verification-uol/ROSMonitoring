@@ -1,7 +1,7 @@
 
 <launch>
         
-<node pkg="monitor" type="monitor_human_operator_1.py" name="monitor_human_operator_1" output="screen"/>
+<node pkg="monitor" type="radiation_monitor.py" name="radiation_monitor" output="screen"/>
             
 </launch>
         

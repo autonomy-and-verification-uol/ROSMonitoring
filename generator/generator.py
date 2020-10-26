@@ -24,7 +24,7 @@ import os
 import yaml
 import xml.etree.ElementTree as ET
 
-def create_monitor(monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent): # function which creates the python ROS monitor
+def create_monitor(monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent, warning): # function which creates the python ROS monitor
     with open('../monitor/src/' + monitor_id + '.py', 'w') as monitor: # the monitor code will be in monitor.py
     # write the imports the monitor is gonna need
         imports = '''#!/usr/bin/env python
@@ -194,16 +194,15 @@ def on_message(ws, message):
             other_callbacks += '''
     else:
         logging(json_dict)
-        if json_dict['verdict'] == 'false':'''
+        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] == 2) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):'''
             if not silent:
                 other_callbacks += '''
             rospy.loginfo('The event ' + message + ' is inconsistent..')'''
             other_callbacks += '''
-            if actions[json_dict['topic']][1]:
-                error = MonitorError()
-                error.topic = json_dict['topic']
-                error.time = json_dict['time']
-                error.property = json_dict['spec']'''
+            error = MonitorError()
+            error.topic = json_dict['topic']
+            error.time = json_dict['time']
+            error.property = json_dict['spec']'''
             if oracle_action == 'nothing':
                 other_callbacks += '''
             error.content = str(dict_msgs[json_dict['time']])'''
@@ -217,7 +216,7 @@ def on_message(ws, message):
             error.content = json.dumps(json_dict_copy)'''
             other_callbacks += '''
             pub_error.publish(error)
-            if not pub_dict:
+            if json_dict['verdict'] == 'false' and not pub_dict:
                 rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
                 ws.close()
                 exit(0)
@@ -275,10 +274,10 @@ def main(argv):
     actions = {'''
         first_time = True
         for topic_with_types_and_action in topics_with_types_and_action:
-            if 'warning' in topic_with_types_and_action:
-                warning = topic_with_types_and_action['warning']
-            else:
-                warning = False
+            # if 'warning' in topic_with_types_and_action:
+            #     warning = topic_with_types_and_action['warning']
+            # else:
+            #     warning = 0
             if(first_time):
                 first_time = False
             else:

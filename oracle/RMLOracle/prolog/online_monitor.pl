@@ -9,7 +9,7 @@
 :- use_module(trace_expressions_semantics).
 
 :- http_handler(/,http_upgrade_to_websocket(manage_event, []),[]). %%% default options for both the websocket and the http handler
-:- dynamic obs_violation/1.
+
 %% arguments
 %% the server expects a required first argument: the filename containing the specified trace expression
 %% second optional argument: a log file, if not provided no logging is performed
