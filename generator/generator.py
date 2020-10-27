@@ -141,9 +141,9 @@ def monitor():
     global pub_error, pub_verdict
     with open(log, 'w') as log_file:
         log_file.write('')
-    rospy.init_node('monitor', anonymous=True)
-    pub_error = rospy.Publisher(name = 'monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
-    pub_verdict = rospy.Publisher(name = 'monitor_verdict', data_class = String, latch = True, queue_size = 1000)'''
+    rospy.init_node('{id}', anonymous=True)
+    pub_error = rospy.Publisher(name = '{id}/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
+    pub_verdict = rospy.Publisher(name = '{id}/monitor_verdict', data_class = String, latch = True, queue_size = 1000)'''.format(id = monitor_id)
         for topic_with_types_and_action in topics_with_types_and_action:
             if 'subscribers' in topic_with_types_and_action:
                 tp_side = topic_with_types_and_action['name']

@@ -31,12 +31,25 @@ nodes: # here we list the nodes we are going to monitor
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: radiation_monitor
-      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log.txt # file where the monitor will log the observed events
+      id: radiation_monitor_orange
+      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log_radiation_orange.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
       warning: 1
       oracle: # the oracle running and ready to check the specification (localhost in this case)
         port: 8080 # the port where it is listening
+        url: 127.0.0.1 # the url where it is listening
+        action: nothing # the oracle will not change the message
+      topics: # the list of topics this monitor is going to intercept
+        - name: /radiation_sensor_plugin/sensor_0 # name of the topic
+          type: gazebo_radiation_plugins.msg.Simulated_Radiation_Msg # type of the topic
+          action: log
+  - monitor:
+      id: radiation_monitor_red
+      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log_radiation_red.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      warning: 1
+      oracle: # the oracle running and ready to check the specification (localhost in this case)
+        port: 8081 # the port where it is listening
         url: 127.0.0.1 # the url where it is listening
         action: nothing # the oracle will not change the message
       topics: # the list of topics this monitor is going to intercept

@@ -39,7 +39,7 @@ predicates = dict(
 
 # function to abstract a dictionary (obtained from Json message) into a list of predicates
 def abstract_message(message):
-    if message['value'] > 50.0:
+    if message['value'] >= 120.0:
         predicates['radiation_level_high'] = True
     else:
         predicates['radiation_level_high'] = False

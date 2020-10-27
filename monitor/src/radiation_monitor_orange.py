@@ -39,9 +39,9 @@ def monitor():
     global pub_error, pub_verdict
     with open(log, 'w') as log_file:
         log_file.write('')
-    rospy.init_node('radiation_monitor', anonymous=True)
-    pub_error = rospy.Publisher(name = 'radiation_monitor/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
-    pub_verdict = rospy.Publisher(name = 'radiation_monitor/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
+    rospy.init_node('radiation_monitor_orange', anonymous=True)
+    pub_error = rospy.Publisher(name = 'radiation_monitor_orange/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
+    pub_verdict = rospy.Publisher(name = 'radiation_monitor_orange/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
     rospy.Subscriber('/radiation_sensor_plugin/sensor_0', Simulated_Radiation_Msg, callback_radiation_sensor_plugin_sensor_0)
     rospy.loginfo('monitor started and ready')
         
@@ -103,7 +103,7 @@ def logging(json_dict):
 
 def main(argv):
     global log, actions, ws
-    log = '/media/angelo/WorkData/git/radiation_ws/src/monitor/log.txt'
+    log = '/media/angelo/WorkData/git/radiation_ws/src/monitor/log_radiation_orange.txt'
     
     actions = {
             '/radiation_sensor_plugin/sensor_0' : ('log', 1)
