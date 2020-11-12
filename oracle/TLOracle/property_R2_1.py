@@ -23,27 +23,23 @@
 import oracle
 
 # type of the property (PLTL, PMTL, or PSTL)
-TYPE = oracle.TypeOfProperty.PMTL
+TYPE = oracle.TypeOfProperty.PLTL
 
 # MTL property to verify
-PROPERTY = "(once[0:5](not radiation_level_high))"
-# In this case is Past-MTL, but it can also be a Past-LTL or Past-STL
+PROPERTY = "(historically(dist_x > 0 or dist_y > 0 or dist_z > 0))"
+# In this case is Past-LTL
 
 # predicates used in the property (initialization for time 0)
-predicates = dict(
-    time = 0,
-    radiation_level = 0,
-    radiation_level_high = False
-)
+predicates = dict()
 # in here we can add all the predicates we are interested in.. Of course, we also need to define how to translate Json messages to predicates.
 
 # function to abstract a dictionary (obtained from Json message) into a list of predicates
 def abstract_message(message):
-    if message['value'] >= 250.0:
-        predicates['radiation_level_high'] = True
-    else:
-        predicates['radiation_level_high'] = False
-    predicates['time'] = int(message['time'])
+    predicates['dist_x'] = message['data'][0]
+    predicates['dist_y'] = message['data'][1]
+    predicates['dist_z'] = message['data'][2]
+    predicates['time'] = message['time']
+    print(predicates)
     return predicates
 # This function has to be defined by the user depending on the property defined.
 # In this case we have just implemented a simple and general function which

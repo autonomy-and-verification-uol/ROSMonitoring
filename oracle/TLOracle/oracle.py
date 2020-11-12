@@ -30,6 +30,7 @@ from threading import *
 import argparse
 import importlib
 from enum import Enum
+import time
 
 # type of properties available in reelay
 class TypeOfProperty(Enum):
@@ -62,19 +63,26 @@ def message_received(client, server, message):
 
 # Function checking the event against the specification (it simply calls Reelay, nothing more)
 def check_event(event):
-	global time
+	global last_time
 	event_dict = json.loads(event)
-	if not time:
-		time = event_dict['time']
-		event_dict['time'] = 0
+	if 'time' in event_dict:
+		if not last_time:
+			last_time = event_dict['time']
+			event_dict['time'] = 0
+		else:
+			event_dict['time'] = event_dict['time'] - last_time
 	else:
-		event_dict['time'] = event_dict['time'] - time
+		if not last_time:
+			last_time = time.time()
+			event_dict['time'] = 0
+		else:
+			event_dict['time'] = int(time.time() - last_time)
 	return tl_oracle.update(property.abstract_message(event_dict))
 
 def main(argv):
 	global property
 	global tl_oracle
-	global time
+	global last_time
 
 	parser = argparse.ArgumentParser(
         description='this is an Oracle Python implementation based on Reelay for monitoring PTL, MTL and STL properties',
@@ -97,7 +105,7 @@ def main(argv):
 	args = parser.parse_args()
 
 	property = importlib.import_module(args.property)
-	time = None
+	last_time = None
 
 	if property.TYPE.value == TypeOfProperty.PLTL.value:
 		tl_oracle = reelay.past_ltl.monitor(
