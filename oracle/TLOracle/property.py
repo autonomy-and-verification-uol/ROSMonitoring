@@ -23,16 +23,23 @@
 import oracle
 
 # property to verify
-PROPERTY = r'historically{x > 0, y > 0, z > 0}'
+PROPERTY = "historically[0:3]{hello}"
 
 # predicates used in the property (initialization for time 0)
 predicates = dict(
+    time = 0,
+    hello = False
 )
 # in here we can add all the predicates we are interested in.. Of course, we also need to define how to translate Json messages to predicates.
 
 # function to abstract a dictionary (obtained from Json message) into a list of predicates
 def abstract_message(message):
-    return message
+    if message['topic'] == 'chatter' and message['data'] == 'hello':
+        predicates['hello'] = True
+    else:
+        predicates['hello'] = False
+    predicates['time'] = message['time']
+    return predicates
 # This function has to be defined by the user depending on the property defined.
 # In this case we have just implemented a simple and general function which
 # updates the predicates if it finds the topic in the list of predicates.

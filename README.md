@@ -31,8 +31,15 @@ $ sudo apt-get install swi-prolog
 ```
 
 ## Reelay (https://github.com/doganulus/reelay)
-In order to use TL oracle we need to install Reelay. If the user is not interested in using the RML Oracle, this step can be skipped.
+In order to use TL oracle we need to install Reelay. If the user is not interested in using the TL Oracle, this step can be skipped.
 To install Reelay, follow the instructions at: https://github.com/doganulus/reelay/blob/master/docs/install.md
+
+Note: Reelay requires Python 3.
+
+Using pip:
+```bash
+$ python -m pip install reelay
+```
 
 ## Java (https://openjdk.java.net/install/):
 The following instructions are for installing OpenJDK-11.
@@ -250,9 +257,14 @@ More information about RML can be found at: https://rmlatdibris.github.io/
 Alternatively, we can analyse the log file using the TL oracle.
 ```bash
 $ cd ~/ROSMonitoring/oracle/TLOracle/
-$ ./oracle.py --offline --trace ../../log.txt
+$ ./oracle.py --offline --property property --trace ../../log.txt --discrete
 ```
-The MTL property defined now into 'property.py' is only an example (in the chatter example there is nothing interesting enough to be checked).
+The TL property defined now into 'property.py' is only an example (in the chatter example there is nothing interesting enough to be checked). The property says that 'chatter' is always contained inside the message.
+Note:
+
+--discrete means that we are assuming the events homogeneously distributed (the time between two events is fixed)
+
+--dense means that the events can be observed at a different rate (the time between two events is not always the same)
 
 ### Adding a monitor in the middle.
 
@@ -290,7 +302,7 @@ monitors: # here we list the monitors we are going to generate
 
 This configuration file is very similar to the previous one. But this time we are asking for the generation of an online monitor. In order to do so, we need to inform the generator where the Oracle is listening and on which port. In this way, the generated monitor will be capable of communicating with it using WebSockets.
 Another addition to this configuration file is the 'publishers' field inside the chatter topic.
-Since we are doing online RV, the monitor is checking the events at runtime. Now, if we wanted just to log each event, we could maintain the action set to 'log'. The behaviour in this way would be exactly the same as for the offline monitor, with the only difference that each time an event is observed, the monitor propagates this event to the oracle and waits for the current verdict against a chosen property. Consequently, rather than the offline case, in the online scenario, the monitor will also log the satisfaction/violation of the property (but nothing more). This can be useful if we are debugging a system, but in a real scenario we could need to enforce the correcteness of the events. For instance, filtering the events which are considered wrong by the Oracle. For doing this, we can change the action from 'log' to 'filter'.
+Since we are doing online RV, the monitor is checking the events at runtime. Now, if we wanted just to log each event, we could maintain the action set to 'log'. The behaviour in this way would be exactly the same as for the offline monitor, with the only difference that each time an event is observed, the monitor propagates this event to the oracle and waits for the current verdict against a chosen property. Consequently, rather than the offline case, in the online scenario, the monitor will also log the satisfaction/violation of the property (but nothing more). This can be useful if we are debugging a system, but in a real scenario we could need to enforce the correctness of the events. For instance, filtering the events which are considered wrong by the Oracle. For doing this, we can change the action from 'log' to 'filter'.
 
 Once the action 'filter' is selected, the monitor will filter the wrong messages. But, to be able to do so, it must be in the middle of the communication. Until now the monitor was only another node in the system and was just subscribing the topics. This is not enough if we want to filter the wrong messages. In order to solve this problem, ROSMonitoring instrument the nodes changing the names and creating gaps in the communications. Thanks to this communication gaps, the monitor can become a bridge for the topics of our interest, and filter the messages in case they are wrong.
 
@@ -331,10 +343,19 @@ The monitor will now check the events at runtime. But, since the property is alw
 Alternatively, we can use the online oracle with TL properties.
 ```bash
 $ cd ~/ROSMonitoring/oracle/TLOracle/
-$ ./oracle.py --online --port 8080
+$ ./oracle.py --online --property property --port 8080 --discrete
 
 ```
 In this way, the Python oracle will start listening on the 8080 port. Each message observed on this connection will be passed to Reelay and checked against the property defined in property.py.
+
+## Additional information published by the monitor (online)
+
+The monitor reports constantly information about its analysis.
+
+- When a violation of the formal property is observed, the monitor publishes a message on the topic '/{monitor_id}/monitor_error' of type MonitorError (monitor/msg/MonitorError.msg). Where {monitor_id} is the monitor id added in the configuration file (see generation section above). For instance, if monitor id is 'monitor_1', then the error messages will be reported on the topic '/monitor_1/monitor_error'.
+- On the topic '/{monitor_id}/monitor_verdict' it is possible to keep track of the current monitor's verdict. The message is of type String, and can be: 'true', 'false', 'currently_true', 'currently_false', 'unknown'. Depending on the chosen oracle, all or a subset of these verdicts can be reported by the monitor.  
+
+Note: To enable the publishing of error messages, the user has to set the warning field to 1 or 2 (0 no warnings will be published). If the warning level is set to 1, then an error will be reported when the monitor's verdict is 'currently_false' or 'false'. If the warning level is set to 2, then an error will be reported only when the monitor's verdict is 'false'. Thanks to the warning level we can customise how strict we want to be on the monitor's verdict. There might be scenarios where we might be more interested in checking a property against the system (in this case warning level 2, since we only care about the system satisfying/violating the property); while there might be other scenarios where we care about the current satisfaction/violation of a property in the current system state (warning level 2), even though in the future the verdict might change. In practice, warning level has to be set to 2 when we only care about final verdicts, so we want the monitor to report an error only when it has proven the property has been violated by the system and will always be violated; warning level to 1, when we are not interested only in the final verdict, and we want to give importance to the current observed trace, and its satisfaction/violation of the property under analysis. In this case, the current state of the system might be satisfying/violating the property, but the monitor cannot conclude it will always be satisfied/violated.
 
 # License:
 ROSMonitoring project is released under MIT license

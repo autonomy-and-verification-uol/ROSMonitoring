@@ -194,7 +194,7 @@ def on_message(ws, message):
             other_callbacks += '''
     else:
         logging(json_dict)
-        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] == 2) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):'''
+        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):'''
             if not silent:
                 other_callbacks += '''
             rospy.loginfo('The event ' + message + ' is inconsistent..')'''

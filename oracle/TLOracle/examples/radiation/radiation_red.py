@@ -22,17 +22,13 @@
 
 import oracle
 
-# type of the property (PLTL, PMTL, or PSTL)
-TYPE = oracle.TypeOfProperty.PMTL
-
 # MTL property to verify
-PROPERTY = "(once[0:3](not radiation_level_high))"
+PROPERTY = "(once[0:3](not {radiation_level_high}))"
 # In this case is Past-MTL, but it can also be a Past-LTL or Past-STL
 
 # predicates used in the property (initialization for time 0)
 predicates = dict(
     time = 0,
-    radiation_level = 0,
     radiation_level_high = False
 )
 # in here we can add all the predicates we are interested in.. Of course, we also need to define how to translate Json messages to predicates.

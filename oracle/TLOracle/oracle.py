@@ -30,7 +30,6 @@ from threading import *
 import argparse
 import importlib
 from enum import Enum
-import time
 
 # type of properties available in reelay
 class TypeOfProperty(Enum):
@@ -63,26 +62,33 @@ def message_received(client, server, message):
 
 # Function checking the event against the specification (it simply calls Reelay, nothing more)
 def check_event(event):
-	global last_time
+	global last_time, tl_oracle, property, last_res
 	event_dict = json.loads(event)
+	if not tl_oracle:
+		if model == 'dense' and 'time' in event_dict:
+			tl_oracle = reelay.dense_timed_monitor(pattern = property.PROPERTY)
+		else:
+			tl_oracle = reelay.discrete_timed_monitor(pattern = property.PROPERTY)
 	if 'time' in event_dict:
-		if not last_time:
+		if last_time is None:
 			last_time = event_dict['time']
 			event_dict['time'] = 0
 		else:
 			event_dict['time'] = event_dict['time'] - last_time
-	else:
-		if not last_time:
-			last_time = time.time()
-			event_dict['time'] = 0
-		else:
-			event_dict['time'] = int(time.time() - last_time)
-	return tl_oracle.update(property.abstract_message(event_dict))
+	abs_msg = property.abstract_message(event_dict)
+	res = tl_oracle.update(abs_msg)
+	if model == 'discrete' and res:
+		last_res = res['value']
+	if model == 'dense' and res:
+		last_res = True
+		for d in res:
+			if not d['value']:
+				last_res = False
+				break
+	return last_res
 
 def main(argv):
-	global property
-	global tl_oracle
-	global last_time
+	global property, tl_oracle, last_time, model, last_res
 
 	parser = argparse.ArgumentParser(
         description='this is an Oracle Python implementation based on Reelay for monitoring PTL, MTL and STL properties',
@@ -95,6 +101,10 @@ def main(argv):
 		action='store_true')
 	parser.add_argument('--offline',
 		action='store_true')
+	parser.add_argument('--discrete',
+		action='store_true')
+	parser.add_argument('--dense',
+		action='store_true')
 	parser.add_argument('--port',
 		help='Port where the Websocket Oracle has to listen on',
 		default = 8080,
@@ -106,20 +116,15 @@ def main(argv):
 
 	property = importlib.import_module(args.property)
 	last_time = None
+	tl_oracle = None
+	last_res = True
 
-	if property.TYPE.value == TypeOfProperty.PLTL.value:
-		tl_oracle = reelay.past_ltl.monitor(
-	        pattern = property.PROPERTY)
-	elif property.TYPE.value == TypeOfProperty.PMTL.value:
-		tl_oracle = reelay.past_mtl.monitor(
-	        pattern = property.PROPERTY,
-	        time_model = 'discrete')
-	elif property.TYPE.value ==TypeOfProperty.PSTL.value:
-		tl_oracle = reelay.past_stl.monitor(
-	        pattern = property.PROPERTY,
-	        time_model = 'dense')
+	if args.discrete:
+		model = 'discrete'
+	elif args.dense:
+		model = 'dense'
 	else:
-		print('Property type not supported by reelay')
+		print('You have to specify if the time is discrete or dense (example, --discrete, -- dense)')
 		return
 
 	if args.online:
@@ -139,7 +144,7 @@ def main(argv):
 				if not check_event(event):
 					print('Property violated: ' + property.PROPERTY)
 					print('The event: \n' + event + '\n' + 'is not consistent with the specification.')
-					return
+					#return
 	else:
 		print('You have to specify if the oracle has to perform Online (--online) or Offline (--offline) verification')
 
