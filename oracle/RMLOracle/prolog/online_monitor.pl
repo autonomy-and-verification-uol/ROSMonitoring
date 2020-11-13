@@ -46,14 +46,22 @@ manage_event(WebSocket) :-
     (Msg.opcode==close ->
 	     true;
 	       E=Msg.data,
-         %writeln('Message data: '),
-         %writeln(E),
+         writeln('Message data: '),
+         writeln(E),
 	       nb_getval(state,TE1),
+         writeln(TE1),
          % for experiments
-         random(R),
-         ((R < 0.7) -> (next(TE1,E,TE2), nb_setval(state,TE2), Reply=E);(term_string(TE1, TE1Str), Reply=(_{}.put(E).put(_{error:true, spec:TE1Str})))),
-	       %(next(TE1,E,TE2) -> nb_setval(state,TE2),Reply=E; term_string(TE1, TE1Str), Reply=(_{}.put(E).put(_{error:true, spec:TE1Str}))),
-	       atom_json_dict(Json,Reply,[as(string)]),
+         %random(R),
+         %((R < 0.7) -> (next(TE1,E,TE2), nb_setval(state,TE2), Reply=E);(term_string(TE1, TE1Str), Reply=(_{}.put(E).put(_{error:true, spec:TE1Str})))),
+         (next(TE1, E, TE2) ->
+           (nb_setval(state,TE2),
+           (TE2 = 1 ->
+             (writeln('verdict = True'), Reply=(_{}.put(E).put(_{verdict:true}))); % Verdict = True
+             (may_halt(TE2) ->
+               (writeln('verdict = ?_True'), Reply=(_{}.put(E).put(_{verdict:currently_true}))); % Verdict = ?_True
+               (writeln('verdict = ?_False'), Reply=(_{}.put(E).put(_{verdict:currently_false})))))); % Verdict = ?_False
+           (nb_setval(state, 0), writeln('verdict = False'), term_string(TE1, TE1Str), Reply=(_{}.put(E).put(_{verdict:false, spec:TE1Str})))), % Verdict = False
+         atom_json_dict(Json,Reply,[as(string)]),
 	       ws_send(WebSocket, string(Json)),
 	       manage_event(WebSocket)).
 

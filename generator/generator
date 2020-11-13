@@ -105,7 +105,11 @@ def main(argv):
                         silent = True
                     else:
                         silent = False
-                    create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent)
+                    if 'warning' in monitor['monitor'] and monitor['monitor']['warning']:
+                        warning = monitor['monitor']['warning']
+                    else:
+                        warning = 0
+                    create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent, warning)
                 create_launch_file(ids)
                 instrument_launch_files(nodes)
         except yaml.YAMLError as exc:

@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) [2019] [Angelo Ferrando]
+# Copyright (c) [2020] [Angelo Ferrando]
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,25 +20,23 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Config file for the instrumentation of ROS
-# this file is given in input to generator
-#
-nodes: # here we list the nodes we are going to monitor
-  - node:
-      name: snapshot
-      package: ariac_example
-      path: /home/angelo/ariac_ws/src/monitor/run_perceptions.launch
+import oracle
 
-monitors: # here we list the monitors we are going to generate
-  - monitor:
-      id: monitor_human_operator_1
-      log: /home/angelo/ariac_ws/src/monitor/log.txt # file where the monitor will log the observed events
-      silent: False # we let the monitor to print info during its execution
-      oracle: # the oracle running and ready to check the specification (localhost in this case)
-        port: 8080 # the port where it is listening
-        url: 127.0.0.1 # the url where it is listening
-        action: nothing # the oracle will not change the message
-      topics: # the list of topics this monitor is going to intercept
-        - name: snapshot # name of the topic
-          type: nist_gear.msg.Snapshot # type of the topic
-          action: log
+
+# property to verify
+PROPERTY = r'historically{x > 0, y > 0, z > 0}'
+
+# predicates used in the property (initialization for time 0)
+predicates = dict(
+)
+# in here we can add all the predicates we are interested in.. Of course, we also need to define how to translate Json messages to predicates.
+
+# function to abstract a dictionary (obtained from Json message) into a list of predicates
+def abstract_message(message):
+    return message
+# This function has to be defined by the user depending on the property defined.
+# In this case we have just implemented a simple and general function which
+# updates the predicates if it finds the topic in the list of predicates.
+# Since the property is defined on predicates, we need this function to update the
+# predicates each time a message is observed. This abstraction of course is totally
+# dependent on the specific application.

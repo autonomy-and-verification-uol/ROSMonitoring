@@ -25,20 +25,34 @@
 #
 nodes: # here we list the nodes we are going to monitor
   - node:
-      name: snapshot
-      package: ariac_example
-      path: /home/angelo/ariac_ws/src/monitor/run_perceptions.launch
+      name: /radiation_sensor_plugin/sensor_0
+      package: gazebo_radiation_plugins
+      path: /media/angelo/WorkData/git/radiation_ws/src/gazebo_radiation_plugin/launch/radiation_demonstrator.launch
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: monitor_human_operator_1
-      log: /home/angelo/ariac_ws/src/monitor/log.txt # file where the monitor will log the observed events
+      id: radiation_monitor_orange
+      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log_radiation_orange.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
+      warning: 1
       oracle: # the oracle running and ready to check the specification (localhost in this case)
         port: 8080 # the port where it is listening
         url: 127.0.0.1 # the url where it is listening
         action: nothing # the oracle will not change the message
       topics: # the list of topics this monitor is going to intercept
-        - name: snapshot # name of the topic
-          type: nist_gear.msg.Snapshot # type of the topic
+        - name: /radiation_sensor_plugin/sensor_0 # name of the topic
+          type: gazebo_radiation_plugins.msg.Simulated_Radiation_Msg # type of the topic
+          action: log
+  - monitor:
+      id: radiation_monitor_red
+      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log_radiation_red.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      warning: 1
+      oracle: # the oracle running and ready to check the specification (localhost in this case)
+        port: 8081 # the port where it is listening
+        url: 127.0.0.1 # the url where it is listening
+        action: nothing # the oracle will not change the message
+      topics: # the list of topics this monitor is going to intercept
+        - name: /radiation_sensor_plugin/sensor_0 # name of the topic
+          type: gazebo_radiation_plugins.msg.Simulated_Radiation_Msg # type of the topic
           action: log
