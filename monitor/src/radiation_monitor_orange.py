@@ -12,13 +12,55 @@ from std_msgs.msg import String
 ws_lock = Lock()
 dict_msgs = {}
             
-from gazebo_radiation_plugins.msg import Simulated_Radiation_Msg
+from gazebo_radiation_plugins.msg import Inspection
+from gazebo_radiation_plugins.msg import Command
+from std_msgs.msg import String
+from std_msgs.msg import Int16
 
-def callback_radiation_sensor_plugin_sensor_0(data):
+def callback_currentLoc(data):
     global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = '/radiation_sensor_plugin/sensor_0'
+    dict['topic'] = '/currentLoc'
+    dict['time'] = rospy.get_time()
+    ws_lock.acquire()
+    while dict['time'] in dict_msgs:
+        dict['time'] += 0.01
+    ws.send(json.dumps(dict))
+    dict_msgs[dict['time']] = data
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
+def callback_radiationStatus(data):
+    global ws, ws_lock
+    rospy.loginfo('monitor has observed: ' + str(data))
+    dict = message_converter.convert_ros_message_to_dictionary(data)
+    dict['topic'] = '/radiationStatus'
+    dict['time'] = rospy.get_time()
+    ws_lock.acquire()
+    while dict['time'] in dict_msgs:
+        dict['time'] += 0.01
+    ws.send(json.dumps(dict))
+    dict_msgs[dict['time']] = data
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
+def callback_command(data):
+    global ws, ws_lock
+    rospy.loginfo('monitor has observed: ' + str(data))
+    dict = message_converter.convert_ros_message_to_dictionary(data)
+    dict['topic'] = '/command'
+    dict['time'] = rospy.get_time()
+    ws_lock.acquire()
+    while dict['time'] in dict_msgs:
+        dict['time'] += 0.01
+    ws.send(json.dumps(dict))
+    dict_msgs[dict['time']] = data
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
+def callback_inspected(data):
+    global ws, ws_lock
+    rospy.loginfo('monitor has observed: ' + str(data))
+    dict = message_converter.convert_ros_message_to_dictionary(data)
+    dict['topic'] = '/inspected'
     dict['time'] = rospy.get_time()
     ws_lock.acquire()
     while dict['time'] in dict_msgs:
@@ -32,7 +74,10 @@ pub_dict = {
 }
         
 msg_dict = {
-    '/radiation_sensor_plugin/sensor_0' : "gazebo_radiation_plugins/Simulated_Radiation_Msg"
+    '/currentLoc' : "std_msgs/Int16", 
+    '/radiationStatus' : "std_msgs/String", 
+    '/command' : "gazebo_radiation_plugins/Command", 
+    '/inspected' : "gazebo_radiation_plugins/Inspection"
 }
         
 def monitor():
@@ -42,7 +87,10 @@ def monitor():
     rospy.init_node('radiation_monitor_orange', anonymous=True)
     pub_error = rospy.Publisher(name = 'radiation_monitor_orange/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
     pub_verdict = rospy.Publisher(name = 'radiation_monitor_orange/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
-    rospy.Subscriber('/radiation_sensor_plugin/sensor_0', Simulated_Radiation_Msg, callback_radiation_sensor_plugin_sensor_0)
+    rospy.Subscriber('/currentLoc', Int16, callback_currentLoc)
+    rospy.Subscriber('/radiationStatus', String, callback_radiationStatus)
+    rospy.Subscriber('/command', Command, callback_command)
+    rospy.Subscriber('/inspected', Inspection, callback_inspected)
     rospy.loginfo('monitor started and ready')
         
 def on_message(ws, message):
@@ -62,7 +110,7 @@ def on_message(ws, message):
             del dict_msgs[json_dict['time']]
     else:
         logging(json_dict)
-        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] == 2) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):
+        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):
             rospy.loginfo('The event ' + message + ' is inconsistent..')
             error = MonitorError()
             error.topic = json_dict['topic']
@@ -106,7 +154,10 @@ def main(argv):
     log = '/media/angelo/WorkData/git/radiation_ws/src/monitor/log_radiation_orange.txt'
     
     actions = {
-            '/radiation_sensor_plugin/sensor_0' : ('log', 1)
+            '/currentLoc' : ('log', 1), 
+            '/radiationStatus' : ('log', 1), 
+            '/command' : ('log', 1), 
+            '/inspected' : ('log', 1)
     }
     monitor()
     websocket.enableTrace(False)

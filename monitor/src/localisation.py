@@ -12,13 +12,27 @@ from std_msgs.msg import String
 ws_lock = Lock()
 dict_msgs = {}
             
-from nist_gear.msg import Snapshot
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
-def callbacksnapshot(data):
+def callbackcmd_vel(data):
     global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'snapshot'
+    dict['topic'] = 'cmd_vel'
+    dict['time'] = rospy.get_time()
+    ws_lock.acquire()
+    while dict['time'] in dict_msgs:
+        dict['time'] += 0.01
+    ws.send(json.dumps(dict))
+    dict_msgs[dict['time']] = data
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
+def callbackamcl_pose(data):
+    global ws, ws_lock
+    rospy.loginfo('monitor has observed: ' + str(data))
+    dict = message_converter.convert_ros_message_to_dictionary(data)
+    dict['topic'] = 'amcl_pose'
     dict['time'] = rospy.get_time()
     ws_lock.acquire()
     while dict['time'] in dict_msgs:
@@ -32,17 +46,19 @@ pub_dict = {
 }
         
 msg_dict = {
-    'snapshot' : "nist_gear/Snapshot"
+    'cmd_vel' : "geometry_msgs/Twist", 
+    'amcl_pose' : "geometry_msgs/PoseWithCovarianceStamped"
 }
         
 def monitor():
     global pub_error, pub_verdict
     with open(log, 'w') as log_file:
         log_file.write('')
-    rospy.init_node('monitor_human_operator_1', anonymous=True)
-    pub_error = rospy.Publisher(name = 'monitor_human_operator_1/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
-    pub_verdict = rospy.Publisher(name = 'monitor_human_operator_1/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
-    rospy.Subscriber('snapshot', Snapshot, callbacksnapshot)
+    rospy.init_node('localisation', anonymous=True)
+    pub_error = rospy.Publisher(name = 'localisation/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
+    pub_verdict = rospy.Publisher(name = 'localisation/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
+    rospy.Subscriber('cmd_vel', Twist, callbackcmd_vel)
+    rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, callbackamcl_pose)
     rospy.loginfo('monitor started and ready')
         
 def on_message(ws, message):
@@ -103,15 +119,16 @@ def logging(json_dict):
 
 def main(argv):
     global log, actions, ws
-    log = '/home/angelo/ariac_ws/src/monitor/log.txt'
+    log = '/media/angelo/WorkData/git/radiation_ws/src/monitor/log_localisation.txt'
     
     actions = {
-            'snapshot' : ('log', 0)
+            'cmd_vel' : ('log', 1), 
+            'amcl_pose' : ('log', 1)
     }
     monitor()
     websocket.enableTrace(False)
     ws = websocket.WebSocketApp(
-        'ws://127.0.0.1:8080',
+        'ws://127.0.0.1:8083',
         on_message = on_message,
         on_error = on_error,
         on_close = on_close,

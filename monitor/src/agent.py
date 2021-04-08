@@ -12,13 +12,55 @@ from std_msgs.msg import String
 ws_lock = Lock()
 dict_msgs = {}
             
-from nist_gear.msg import Snapshot
+from gazebo_radiation_plugins.msg import Inspection
+from gazebo_radiation_plugins.msg import Command
+from std_msgs.msg import String
+from std_msgs.msg import Int16
 
-def callbacksnapshot(data):
+def callbackcurrentLoc(data):
     global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = 'snapshot'
+    dict['topic'] = 'currentLoc'
+    dict['time'] = rospy.get_time()
+    ws_lock.acquire()
+    while dict['time'] in dict_msgs:
+        dict['time'] += 0.01
+    ws.send(json.dumps(dict))
+    dict_msgs[dict['time']] = data
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
+def callbackradiationStatus(data):
+    global ws, ws_lock
+    rospy.loginfo('monitor has observed: ' + str(data))
+    dict = message_converter.convert_ros_message_to_dictionary(data)
+    dict['topic'] = 'radiationStatus'
+    dict['time'] = rospy.get_time()
+    ws_lock.acquire()
+    while dict['time'] in dict_msgs:
+        dict['time'] += 0.01
+    ws.send(json.dumps(dict))
+    dict_msgs[dict['time']] = data
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
+def callbackcommand(data):
+    global ws, ws_lock
+    rospy.loginfo('monitor has observed: ' + str(data))
+    dict = message_converter.convert_ros_message_to_dictionary(data)
+    dict['topic'] = 'command'
+    dict['time'] = rospy.get_time()
+    ws_lock.acquire()
+    while dict['time'] in dict_msgs:
+        dict['time'] += 0.01
+    ws.send(json.dumps(dict))
+    dict_msgs[dict['time']] = data
+    ws_lock.release()
+    rospy.loginfo('event propagated to oracle')
+def callbackinspected(data):
+    global ws, ws_lock
+    rospy.loginfo('monitor has observed: ' + str(data))
+    dict = message_converter.convert_ros_message_to_dictionary(data)
+    dict['topic'] = 'inspected'
     dict['time'] = rospy.get_time()
     ws_lock.acquire()
     while dict['time'] in dict_msgs:
@@ -32,17 +74,23 @@ pub_dict = {
 }
         
 msg_dict = {
-    'snapshot' : "nist_gear/Snapshot"
+    'currentLoc' : "std_msgs/Int16", 
+    'radiationStatus' : "std_msgs/String", 
+    'command' : "gazebo_radiation_plugins/Command", 
+    'inspected' : "gazebo_radiation_plugins/Inspection"
 }
         
 def monitor():
     global pub_error, pub_verdict
     with open(log, 'w') as log_file:
         log_file.write('')
-    rospy.init_node('monitor_human_operator_1', anonymous=True)
-    pub_error = rospy.Publisher(name = 'monitor_human_operator_1/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
-    pub_verdict = rospy.Publisher(name = 'monitor_human_operator_1/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
-    rospy.Subscriber('snapshot', Snapshot, callbacksnapshot)
+    rospy.init_node('agent', anonymous=True)
+    pub_error = rospy.Publisher(name = 'agent/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
+    pub_verdict = rospy.Publisher(name = 'agent/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
+    rospy.Subscriber('currentLoc', Int16, callbackcurrentLoc)
+    rospy.Subscriber('radiationStatus', String, callbackradiationStatus)
+    rospy.Subscriber('command', Command, callbackcommand)
+    rospy.Subscriber('inspected', Inspection, callbackinspected)
     rospy.loginfo('monitor started and ready')
         
 def on_message(ws, message):
@@ -103,10 +151,13 @@ def logging(json_dict):
 
 def main(argv):
     global log, actions, ws
-    log = '/home/angelo/ariac_ws/src/monitor/log.txt'
+    log = '/media/angelo/WorkData/git/radiation_ws/src/monitor/log_agent.txt'
     
     actions = {
-            'snapshot' : ('log', 0)
+            'currentLoc' : ('log', 1), 
+            'radiationStatus' : ('log', 1), 
+            'command' : ('log', 1), 
+            'inspected' : ('log', 1)
     }
     monitor()
     websocket.enableTrace(False)

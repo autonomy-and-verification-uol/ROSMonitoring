@@ -1,0 +1,111 @@
+# MIT License
+#
+# Copyright (c) [2019] [Angelo Ferrando]
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# Config file for the instrumentation of ROS
+# this file is given in input to generator
+#
+nodes: # here we list the nodes we are going to monitor
+  - node:
+      name: /radiation_sensor_plugin/sensor_0
+      package: gazebo_radiation_plugins
+      path: /media/angelo/WorkData/git/radiation_ws/src/gazebo_radiation_plugin/launch/radiation_demonstrator.launch
+
+monitors: # here we list the monitors we are going to generate
+  - monitor:
+      id: agent
+      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log_agent.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      warning: 1
+      oracle: # the oracle running and ready to check the specification (localhost in this case)
+        port: 8080 # the port where it is listening
+        url: 127.0.0.1 # the url where it is listening
+        action: nothing # the oracle will not change the message
+      topics: # the list of topics this monitor is going to intercept
+        - name: currentLoc
+          type: std_msgs.msg.Int16
+          action: log
+        - name: radiationStatus # name of the topic
+          type: std_msgs.msg.String # type of the topic
+          action: log
+        - name: command
+          type: gazebo_radiation_plugins.msg.Command
+          action: log
+        - name: inspected
+          type: gazebo_radiation_plugins.msg.Inspection
+          action: log
+  - monitor:
+      id: sensor
+      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log_sensor.txt
+      silent: False
+      warning: 1
+      oracle:
+        port: 8081
+        url: 127.0.0.1
+        action: nothing
+      topics:
+        - name: radiationStatus
+          type: std_msgs.msg.String
+          action: log
+        - name: command
+          type: gazebo_radiation_plugins.msg.Command
+          action: log
+        - name: inspected
+          type: gazebo_radiation_plugins.msg.Inspection
+          action: log
+        - name: radiation
+          type: gazebo_radiation_plugins.msg.Simulated_Radiation_Msg
+          action: log
+  - monitor:
+      id: navigation
+      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log_navigation.txt
+      silent: False
+      warning: 1
+      oracle:
+        port: 8082
+        url: 127.0.0.1
+        action: nothing
+      topics:
+        - name: command
+          type: gazebo_radiation_plugins.msg.Command
+          action: log
+        - name: amcl_pose
+          type: geometry_msgs.msg.PoseWithCovarianceStamped
+          action: log
+        - name: /move_base/result
+          type: move_base_msgs.msg.MoveBaseActionResult
+          action: log
+  - monitor:
+      id: localisation
+      log: /media/angelo/WorkData/git/radiation_ws/src/monitor/log_localisation.txt
+      silent: False
+      warning: 1
+      oracle:
+        port: 8083
+        url: 127.0.0.1
+        action: nothing
+      topics:
+        - name: cmd_vel
+          type: geometry_msgs.msg.Twist
+          action: log
+        - name: amcl_pose
+          type: geometry_msgs.msg.PoseWithCovarianceStamped
+          action: log

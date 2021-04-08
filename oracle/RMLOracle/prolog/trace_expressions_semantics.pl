@@ -1,36 +1,18 @@
-% MIT License
-%
-% Copyright (c) [2019] [Davide Ancona, Luca Franceschini, Angelo Ferrando, Viviana Mascardi]
-%
-% Permission is hereby granted, free of charge, to any person obtaining a copy
-% of this software and associated documentation files (the "Software"), to deal
-% in the Software without restriction, including without limitation the rights
-% to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-% copies of the Software, and to permit persons to whom the Software is
-% furnished to do so, subject to the following conditions:
-%
-% The above copyright notice and this permission notice shall be included in all
-% copies or substantial portions of the Software.
-%
-% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-% SOFTWARE.
-
 :- module(trace_expressions,[next/3, may_halt/1, is1/1]).
 
 :- use_module(library(coinduction)).
 :- coinductive apply_sub_trace_exp/3.
 
 /*******************************************************************************************/
-/*                              PARAMETRIC TRACE EXPRESSIONS                                                   */
-/*    Aug 11, 2017: fixed bug with coinduction                                                                   */
-/*    March 2, 2018: test with generic trace expressions                                                    */
-/*    January, 2019: support for RML                                                                                  */
-/*    May, 2019: support for const declarations                                                                  */
+/*                              PARAMETRIC TRACE EXPRESSIONS                               */
+/*    Aug 11, 2017: fixed bug with coinduction                                             */
+/*    March 2, 2018: test with generic trace expressions                                   */
+/*    January, 2019: support for RML                                                       */
+/*    May, 2019: support for local const declarations                                      */
+/*    June, 2020: some fixes: added all cuts for next/4, may_halt/1, apply_sub_trace_exp/3 */
+/*                fixed precedence to correctly manage cut in next/4 for guarded terms     */
+/*    June, 2020: added singleton event type patterns to replace the prefixing operator    */
+/*                prefixing not removed for legacy reasons                                 */
 /*******************************************************************************************/
 
 /* Transition rules */
@@ -41,12 +23,16 @@ next(T, E, T1) :- next(T, E, T1, []).
 %% old patch to avoid problems with json dicts, resolved by using value_string_as(atom) option
 %% next(T, String, T1) :- open_string(String,Stream),json_read_dict(Stream,E,[value_string_as(atom)]), next(T, E, T1, []).
 
+%% June 2020, Davide: added explicit failure for eps; not just an optimization, it ensures also correctness if
+%% a default clause is added at the end, for instance to correctly deal with singleton event type patterns and finite failure
+next(eps,_,_,_) :- !,fail.
+
 % next transition function (parametric version)
-next(1,_,1,[]).  %% 1 is the universe of all traces
+next(1,_,1,[]) :- !.  %% 1 is the universe of all traces
 
 %% 0 is the empty set of traces, no transion rules
 
-next(ET:T, E, T, S) :- match(E, ET, S).
+next(ET:T, E, T, S) :- !,match(E, ET, S).
 
 next(T1\/_, E, T2, S) :- next(T1, E, T2, S),!.
 next(_\/T1, E, T2, S) :- !,next(T1, E, T2, S).
@@ -65,7 +51,7 @@ next(var(X, T), E, T3, RetSubs) :- atom(X),!,next(T, E, T1, Subs1),split([X],Sub
 
 %% general clause
 next(var(Vars, T), E, T3, RetSubs) :-
-    next(T, E, T1, Subs),split(Vars,Subs,SubsVars,RetSubs),apply_sub_trace_exp(SubsVars,T1,T2),unbound(Vars,Subs,UVars),!,(UVars==[]->T3=T2;T3=var(UVars,T2)).
+    !,next(T, E, T1, Subs),split(Vars,Subs,SubsVars,RetSubs),apply_sub_trace_exp(SubsVars,T1,T2),unbound(Vars,Subs,UVars),!,(UVars==[]->T3=T2;T3=var(UVars,T2)).
 
 %% generalization for multiple variables to be implemented
 
@@ -107,12 +93,12 @@ next((ET>T), E, T1, S) :- !,match(E, ET, S1) -> next(T, E, T1, S2),merge(S1, S2,
 next(app(gen(X,T1),Arg), E, T3, S) :- atom(X),!,eval(Arg,Val),apply_sub_trace_exp([X=Val], T1, T2),!,next(T2, E, T3, S). %% agaian here the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
 %% general clause
-next(app(gen(Vars,T1),Args), E, T3, S) :- eval_exps(Vars,Args,Sub),apply_sub_trace_exp(Sub,T1,T2),!,next(T2, E, T3, S).%% agaian here the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
+next(app(gen(Vars,T1),Args), E, T3, S) :- !,eval_exps(Vars,Args,Sub),apply_sub_trace_exp(Sub,T1,T2),!,next(T2, E, T3, S).%% agaian here the cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
 %% proposal for guarded trace expressions
 %% comment: do we really need to return a substitution with solve? According to the ecoop19 calculus guards should be only ground
 %% this should be more in line with the ecoop19/oopsla19 calculus
-next(guarded(P,T1,T2),E,T,S) :- !,P -> next(T1,E,T,S);next(T2,E,T,S).
+next(guarded(P,T1,T2),E,T,S) :- !,(P -> next(T1,E,T,S);next(T2,E,T,S)). %% June 2020, Davide's fix: added parentheses to properly manage cut and precedence of ',' over '->'
 
 %%next(guarded(P,T1,T2),E,T,S) :- !,solve(P,S1) -> next(T1,E,T,S2), merge(S1, S2, S);next(T2,E,T,S).
 
@@ -138,9 +124,13 @@ next(optional(T1), E, T2, S) :- !, next(T1, E, T2, S).
 
 next(with(ET,T,G), E, T, S) :- !,match(E, ET, S),apply_sub_pred(S,G,G2),G2.
 
-%% proposal for constant declarations
+%% proposal for local constant declarations
 next(const(Vars, Exps, T1), E, T3, RetSubs) :-
     eval_exps(Vars,Exps,Subs),apply_sub_trace_exp(Subs,T1,T2),!,next(T2,E,T3,RetSubs). %% cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
+
+%% Davide: support for singleton event type pattern
+%% warning: this should be always the last clause for next
+next(ETP, E, eps, S) :- !,match(E, ETP, S).  %%% thanks to cuts,  nonvar(ETP) or other conditions on ETP should not be needed
 
 %% eval predicates for arguments of generics: for the moment only number/boolean expressions, strings and atoms are supported
 num_exp(Exp) :- Exp=..[Op|_],memberchk(Op,[+,-,/,*]).
@@ -167,6 +157,9 @@ match(E,ET,Subs) :- copy_term_with_vars(ET,FreshET,Subs), match(E,FreshET). %%,w
 %% solve(P,Subs) :- !,copy_term_with_vars(P,[],FreshP,Subs),FreshP.
 solve(P,Subs) :- !,copy_term_with_vars(P,FreshP,Subs),FreshP.
 
+%% June 2020, Davide: added explicit failure for prefixing
+may_halt(_:_) :- !,fail.
+
 may_halt(1) :- !.
 may_halt(eps) :- !.
 may_halt(T1\/T2) :- (may_halt(T1), !; may_halt(T2)).
@@ -185,11 +178,13 @@ may_halt((_>T;_)) :- !, may_halt(T).
 %% proposal for generics
 %may_halt(app(gen(X,T1),Arg)) :- !, Val is Arg, apply_sub_trace_exp([X=Val],T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
 
+may_halt(app(gen(_X,T1),Arg)) :- term_subterm(Arg, var(i)), !, may_halt(T1).
+
 %% legacy clause for just one variable, no need to use a list in this case
 may_halt(app(gen(X,T1),Arg)) :- atom(X),!,eval(Arg,Val),apply_sub_trace_exp([X=Val],T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
 
 %% generic clause
-may_halt(app(gen(Vars,T1),Args)) :- eval_exps(Vars,Args,Subs),apply_sub_trace_exp(Subs,T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
+may_halt(app(gen(Vars,T1),Args)) :- !,eval_exps(Vars,Args,Subs),apply_sub_trace_exp(Subs,T1,T2),!,may_halt(T2). %% usual comment for the cut after apply_sub_trace_exp
 
 %% proposal for guarded trace expressions
 %% this should be more in line with the ecoop19/oopsla19 calculus
@@ -202,19 +197,19 @@ may_halt(guarded(P,T1,T2)) :- !,P->may_halt(T1);may_halt(T2).
 
 %% proposal for prefix closure
 
-may_halt(clos(_)).
+may_halt(clos(_)) :- !.
 
 % regex-like operators
-may_halt(star(_)).
+may_halt(star(_)) :- !.
 may_halt(plus(T)) :- !, may_halt(T).
-may_halt(optional(_)).
+may_halt(optional(_)) :- !.
 
 %% proposal for the with operator, to be tested
 
 %% the with operator can never halt
 
 %% proposal for constant declarations
-may_halt(const(Vars, Exps, T)) :- eval_exps(Vars,Exps,Subs),apply_sub_trace_exp(Subs,T,T2),!,may_halt(T2). %% cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
+may_halt(const(Vars, Exps, T)) :- !,eval_exps(Vars,Exps,Subs),apply_sub_trace_exp(Subs,T,T2),!,may_halt(T2). %% cut after apply_sub_trace_exp is essential to avoid divergence in case of failure due to coinduction
 
 % see if trace expression is equivalent to 1 (only sound, not complete)
 is1(1) :- !.
@@ -256,7 +251,7 @@ concat(T1, T2, T1*T2).
 
 conj(eps/\eps, eps) :- !.
 conj(1,T,T) :- !.
-conj(1,T,T) :- !.
+conj(T,1,T) :- !.
 conj((T1l/\T1r), T2, T1l/\(T1r/\T2)) :- !.
 conj(T1, T2, T1/\T2).
 
@@ -336,7 +331,7 @@ apply_sub_trace_exp(S,T1/\T2,T3/\T4) :- !,apply_sub_trace_exp(S,T1,T3),apply_sub
 %% legacy clause for just one variable, no need to use a list in this case
 apply_sub_trace_exp(S,var(X, T1),var(X, T2)) :- atom(X),!,split([X],S,_Sx,Srest),apply_sub_trace_exp(Srest,T1,T2).
 %% general clause
-apply_sub_trace_exp(S,var(Vars, T1),var(Vars, T2)) :- split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
+apply_sub_trace_exp(S,var(Vars, T1),var(Vars, T2)) :- !,split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
 apply_sub_trace_exp(S,(ET1>>T1;T2),(ET2>>T3;T4)) :- !,apply_sub_event_type(S,ET1,ET2),apply_sub_trace_exp(S,T1,T3),apply_sub_trace_exp(S,T2,T4).
 apply_sub_trace_exp(S,ET1>>T1,ET2>>T2) :- !,apply_sub_event_type(S,ET1,ET2),apply_sub_trace_exp(S,T1,T2).
 apply_sub_trace_exp(S,(ET1>T1;T2),(ET2>T3;T4)) :- !,apply_sub_event_type(S,ET1,ET2),apply_sub_trace_exp(S,T1,T3),apply_sub_trace_exp(S,T2,T4).
@@ -352,7 +347,7 @@ apply_sub_trace_exp(S,app(gen(X,T1),Arg1),app(gen(X,T2),Arg2)) :-
 
 %% generic clause
 apply_sub_trace_exp(S,app(gen(Vars,T1),Args1),app(gen(Vars,T2),Args2)) :-
-    apply_sub_arg(S,Args1,Args2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
+    !,apply_sub_arg(S,Args1,Args2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
 
 %% proposal for guarded trace expressions
 
@@ -379,7 +374,11 @@ apply_sub_trace_exp(S, optional(T1), optional(T2)) :- !, apply_sub_trace_exp(S, 
 apply_sub_trace_exp(S,with(ET,T,G),with(ET2,T2,G2)) :- !, apply_sub_event_type(S, ET, ET2), apply_sub_trace_exp(S, T, T2), apply_sub_pred(S,G,G2).
 
 %% proposal for constant declarations
-apply_sub_trace_exp(S,const(Vars, Exps1, T1),const(Vars, Exps2, T2)) :- apply_sub_arg(S,Exps1,Exps2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
+apply_sub_trace_exp(S,const(Vars, Exps1, T1),const(Vars, Exps2, T2)) :- !,apply_sub_arg(S,Exps1,Exps2),split(Vars,S,_Svars,Srest),apply_sub_trace_exp(Srest,T1,T2).
+
+%% Davide: support for singleton event type pattern
+%% warning: this should be always the last clause for apply_sub_trace_exp
+apply_sub_trace_exp(S, ETP1, ETP2) :- !,apply_sub_event_type(S,ETP1,ETP2). %%% thanks to cuts,  nonvar(ETP1) or other conditions on ETP1 should not be needed
 
 % substitution inside event types
 apply_sub_event_type([],ET,ET) :- !.
@@ -429,8 +428,22 @@ lookup(X,[Y=V1|Subs1],V2,[Y=V1|Subs2]) :- lookup(X,Subs1,V2,Subs2).
 
 copy_term_with_vars(ET,FreshET,Subs) :- copy_term_with_vars(ET,[],FreshET,Subs).
 
+% fix by Davide (Jan 22, 2020), variables should only occurs because of dictionary labels, for instance _{x:1,y:2}
+copy_term_with_vars(X,Subs,X,Subs) :- var(X),!.
+
 copy_term_with_vars(var(X),Subs1,Var,Subs2) :- lookup(X,Subs1,Var,Subs2),!.
 copy_term_with_vars(ET1,Subs1,ET2,Subs2) :- ET1=..[F|Args1],copy_term_with_vars_list(Args1,Subs1,Args2,Subs2),ET2=..[F|Args2].
 
 copy_term_with_vars_list([],Subs,[],Subs).
 copy_term_with_vars_list([ET1|ETL1],Subs1,[ET2|ETL2],Subs3) :- copy_term_with_vars(ET1,Subs1,ET2,Subs2),copy_term_with_vars_list(ETL1,Subs2,ETL2,Subs3).
+
+term_subterm_n(T, S, N) :-
+   bagof(t, term_subterm(T,S), Ts),
+   length(Ts, N).
+
+term_subterm(T, T).
+term_subterm(T, S) :-
+   compound(T),
+   T =.. [_|Es],
+   member(E, Es),
+   term_subterm(E, S).

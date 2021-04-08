@@ -31,7 +31,7 @@ from generator import *
 
 def main(argv):
     parser = argparse.ArgumentParser(
-        description='this is a Python program to generate for monitoring ROS topics',
+        description='this is a Python program to generate monitors to verify ROS topics against formal specifications',
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--config_file',
         help='YAML configuration file',

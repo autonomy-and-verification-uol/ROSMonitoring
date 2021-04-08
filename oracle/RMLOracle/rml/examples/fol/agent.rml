@@ -1,0 +1,30 @@
+// events used to verify the contract
+wayP(i) matches {topic: 'wayP', data: i};
+inspected(i, v) matches {topic: 'inspected', location: i, data: v};
+inspected matches {topic: 'inspected'};
+green matches {topic: 'radiationStatus', data: 'green'};
+orange matches {topic: 'radiationStatus', data: 'orange'};
+red matches {topic: 'radiationStatus', data: 'red'};
+move(i) matches {topic: 'command', name: 'move', location: i};
+move matches {topic: 'command', name: 'move'};
+inspect(i) matches {topic: 'command', name: 'inspect', location: i};
+command matches {topic: 'command'};
+not_command not matches command;
+r1_filter matches inspected(_, _) | green | orange | red |  move(_) | wayP(_);
+r2_filter matches inspected(_, _) | inspect(_) | wayP(_);
+r3_filter matches green | orange | red | move(_);
+r4_filter matches inspect(_) | inspected(_, _);
+
+// requirements specified in the contract
+R1 = (Move<0>)* {let i; ((((current_loc(i)+)|(inspected(i, true)+)|(green+)) Move<i>)!) ((orange \/ red \/ inspected(i, false))+ not_command* command)?}*;
+//R2 = {let i; ((((current_loc(i)+) | (inspected(i, false)+)) inspect(i))!) (inspected(i, true)+ not_command* command+)?}*;
+R2 = {let i; ((inspect(i) (inspected(i, true))) \/ ((inspected(i, false)) inspect(i))) | (current_loc(i))}*;
+// R3 = (Move<0>)* (((((orange \/ red)+) move(0))!) (green+ not_command* command+)?)*;
+R3 = (((orange \/ red) move(0)) \/ green \/ move)*;
+// R4 = {let i; ((inspect(i) inspected(i, true)) \/ (inspected))}*;
+
+// main term
+Main = (r1_filter>>R1) /\ (r2_filter>>R2) /\ (r3_filter>>R3);
+
+// auxiliary terms
+Move<i> = move(i);
