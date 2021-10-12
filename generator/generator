@@ -72,7 +72,7 @@ def main(argv):
                             print('In order to filter the wrong messages, the monitor has to be ONLINE and in the middle of the communication. To have this, the \'oracle\' field and the list of publishers (or subscribers) must be given.')
                             return
                         if 'publishers' in topic_with_types_and_action and 'subscribers' in topic_with_types_and_action:
-                            print('The publishers and subscribers fileds are mutually exclusive. The instrumentation process affects only one side per time.')
+                            print('The publishers and subscribers fields are mutually exclusive. The instrumentation process affects only one side per time.')
                             return
                         if 'publishers' in topic_with_types_and_action:
                             for publisher in topic_with_types_and_action['publishers']:
@@ -108,7 +108,7 @@ def main(argv):
                     if 'warning' in monitor['monitor'] and monitor['monitor']['warning']:
                         warning = monitor['monitor']['warning']
                     else:
-                        warning = 0
+                        warning = 1
                     create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent, warning)
                 create_launch_file(ids)
                 instrument_launch_files(nodes)

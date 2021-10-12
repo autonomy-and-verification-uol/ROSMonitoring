@@ -24,20 +24,23 @@ import oracle
 
 
 # MTL property to verify
-# PROPERTY = "once[0:3](not {radiation_level_high})"
-PROPERTY = "once[0:3]{value < 120}"
+PROPERTY = "once[0:3]{front_distance}"
 # In this case is Past-MTL, but it can also be a Past-LTL or Past-STL
 
 # predicates used in the property (initialization for time 0)
 predicates = dict(
     time = 0,
-    radiation_level_high = False
+    front_distance = False
 )
 # in here we can add all the predicates we are interested in.. Of course, we also need to define how to translate Json messages to predicates.
 
 # function to abstract a dictionary (obtained from Json message) into a list of predicates
 def abstract_message(message):
-    return message
+    if message.ranges[360] >= 6:
+        predicates['front_distance'] = True
+    else:
+        predicates['front_distance'] = False
+    return predicates
     # if message['value'] >= 120.0:
     #     predicates['radiation_level_high'] = True
     # else:

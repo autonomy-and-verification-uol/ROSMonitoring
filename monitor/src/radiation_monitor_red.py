@@ -62,7 +62,7 @@ def on_message(ws, message):
             del dict_msgs[json_dict['time']]
     else:
         logging(json_dict)
-        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] == 2) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):
+        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):
             rospy.loginfo('The event ' + message + ' is inconsistent..')
             error = MonitorError()
             error.topic = json_dict['topic']

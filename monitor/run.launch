@@ -1,9 +1,7 @@
 
 <launch>
         
-<node pkg="monitor" type="monitor_chatter.py" name="monitor_chatter" output="screen"/>
-            
-<node pkg="monitor" type="monitor_count.py" name="monitor_count" output="screen"/>
+<node pkg="monitor" type="safety_distance.py" name="safety_distance" output="screen"/>
             
 </launch>
         

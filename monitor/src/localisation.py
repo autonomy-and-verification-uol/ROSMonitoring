@@ -11,7 +11,7 @@ from std_msgs.msg import String
 
 ws_lock = Lock()
 dict_msgs = {}
-            
+
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
@@ -44,12 +44,12 @@ def callbackamcl_pose(data):
 
 pub_dict = {
 }
-        
+
 msg_dict = {
-    'cmd_vel' : "geometry_msgs/Twist", 
+    'cmd_vel' : "geometry_msgs/Twist",
     'amcl_pose' : "geometry_msgs/PoseWithCovarianceStamped"
 }
-        
+
 def monitor():
     global pub_error, pub_verdict
     with open(log, 'w') as log_file:
@@ -60,7 +60,7 @@ def monitor():
     rospy.Subscriber('cmd_vel', Twist, callbackcmd_vel)
     rospy.Subscriber('amcl_pose', PoseWithCovarianceStamped, callbackamcl_pose)
     rospy.loginfo('monitor started and ready')
-        
+
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
@@ -108,7 +108,7 @@ def on_close(ws):
 
 def on_open(ws):
 	rospy.loginfo('### websocket is open ###')
-            
+
 def logging(json_dict):
     try:
         with open(log, 'a+') as log_file:
@@ -120,9 +120,9 @@ def logging(json_dict):
 def main(argv):
     global log, actions, ws
     log = '/media/angelo/WorkData/git/radiation_ws/src/monitor/log_localisation.txt'
-    
+
     actions = {
-            'cmd_vel' : ('log', 1), 
+            'cmd_vel' : ('log', 1),
             'amcl_pose' : ('log', 1)
     }
     monitor()
@@ -136,4 +136,3 @@ def main(argv):
     ws.run_forever()
 if __name__ == '__main__':
     main(sys.argv)
-        

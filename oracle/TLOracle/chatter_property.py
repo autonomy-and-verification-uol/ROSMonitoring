@@ -22,28 +22,24 @@
 
 import oracle
 
-
-# MTL property to verify
-# PROPERTY = "once[0:3](not {radiation_level_high})"
-PROPERTY = "once[0:3]{value < 120}"
-# In this case is Past-MTL, but it can also be a Past-LTL or Past-STL
+# property to verify
+PROPERTY = "historically[0:3]{hello}"
 
 # predicates used in the property (initialization for time 0)
 predicates = dict(
     time = 0,
-    radiation_level_high = False
+    hello = False
 )
 # in here we can add all the predicates we are interested in.. Of course, we also need to define how to translate Json messages to predicates.
 
 # function to abstract a dictionary (obtained from Json message) into a list of predicates
 def abstract_message(message):
-    return message
-    # if message['value'] >= 120.0:
-    #     predicates['radiation_level_high'] = True
-    # else:
-    #     predicates['radiation_level_high'] = False
-    # predicates['time'] = int(message['time'])
-    # return predicates
+    if message['topic'] == 'chatter' and message['data'] == 'hello':
+        predicates['hello'] = True
+    else:
+        predicates['hello'] = False
+    predicates['time'] = message['time']
+    return predicates
 # This function has to be defined by the user depending on the property defined.
 # In this case we have just implemented a simple and general function which
 # updates the predicates if it finds the topic in the list of predicates.

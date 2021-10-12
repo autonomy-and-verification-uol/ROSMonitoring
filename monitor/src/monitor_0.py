@@ -12,13 +12,14 @@ from std_msgs.msg import String
 ws_lock = Lock()
 dict_msgs = {}
             
-from gazebo_radiation_plugins.msg import Simulated_Radiation_Msg
+from std_msgs.msg import String
 
-def callback_radiation_sensor_plugin_sensor_0(data):
+pubchatter = rospy.Publisher(name = 'chatter', data_class = String, latch = True, queue_size = 1000)
+def callbackchatter(data):
     global ws, ws_lock
     rospy.loginfo('monitor has observed: ' + str(data))
     dict = message_converter.convert_ros_message_to_dictionary(data)
-    dict['topic'] = '/radiation_sensor_plugin/sensor_0'
+    dict['topic'] = 'chatter'
     dict['time'] = rospy.get_time()
     ws_lock.acquire()
     while dict['time'] in dict_msgs:
@@ -29,26 +30,27 @@ def callback_radiation_sensor_plugin_sensor_0(data):
     rospy.loginfo('event propagated to oracle')
 
 pub_dict = {
+    'chatter' : pubchatter
 }
         
 msg_dict = {
-    '/radiation_sensor_plugin/sensor_0' : "gazebo_radiation_plugins/Simulated_Radiation_Msg"
+    'chatter' : "std_msgs/String"
 }
         
 def monitor():
     global pub_error, pub_verdict
     with open(log, 'w') as log_file:
         log_file.write('')
-    rospy.init_node('radiation_monitor_orange', anonymous=True)
-    pub_error = rospy.Publisher(name = 'radiation_monitor_orange/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
-    pub_verdict = rospy.Publisher(name = 'radiation_monitor_orange/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
-    rospy.Subscriber('/radiation_sensor_plugin/sensor_0', Simulated_Radiation_Msg, callback_radiation_sensor_plugin_sensor_0)
+    rospy.init_node('monitor_0', anonymous=True)
+    pub_error = rospy.Publisher(name = 'monitor_0/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
+    pub_verdict = rospy.Publisher(name = 'monitor_0/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
+    rospy.Subscriber('chatter_mon', String, callbackchatter)
     rospy.loginfo('monitor started and ready')
         
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
-    if json_dict['verdict'] == 'true' or json_dict['verdict'] == 'currently_true' or json_dict['verdict'] == 'unknown':
+    if json_dict['verdict'] == 'true' or json_dict['verdict'] == 'currently_true' or json_dict['verdict'] == 'unknown' or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] > 1):
         if json_dict['verdict'] == 'true' and not pub_dict:
             rospy.loginfo('The monitor concluded the satisfaction of the property under analysis, and can be safely removed.')
             ws.close()
@@ -62,26 +64,26 @@ def on_message(ws, message):
             del dict_msgs[json_dict['time']]
     else:
         logging(json_dict)
-        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):
-            rospy.loginfo('The event ' + message + ' is inconsistent..')
-            error = MonitorError()
-            error.topic = json_dict['topic']
-            error.time = json_dict['time']
-            error.property = json_dict['spec']
-            error.content = str(dict_msgs[json_dict['time']])
-            pub_error.publish(error)
-            if json_dict['verdict'] == 'false' and not pub_dict:
-                rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
-                ws.close()
-                exit(0)
+        # if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):
+        rospy.loginfo('The event ' + message + ' is inconsistent..')
+        error = MonitorError()
+        error.topic = json_dict['topic']
+        error.time = json_dict['time']
+        error.property = json_dict['spec']
+        error.content = str(dict_msgs[json_dict['time']])
+        pub_error.publish(error)
+        if json_dict['verdict'] == 'false' and not pub_dict:
+            rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
+            ws.close()
+            exit(0)
         if actions[json_dict['topic']][0] != 'filter':
-            if json_dict['verdict'] == 'currently_false':
-                rospy.loginfo('The event ' + message + ' is consistent ')
+            # if json_dict['verdict'] == 'currently_false':
+                # rospy.loginfo('The event ' + message + ' is consistent ')
             topic = json_dict['topic']
             if topic in pub_dict:
                 pub_dict[topic].publish(dict_msgs[json_dict['time']])
             del dict_msgs[json_dict['time']]
-    	error = True
+       error = True
     pub_verdict.publish(json_dict['verdict'])
 
 def on_error(ws, error):
@@ -103,10 +105,10 @@ def logging(json_dict):
 
 def main(argv):
     global log, actions, ws
-    log = '/media/angelo/WorkData/git/radiation_ws/src/monitor/log_radiation_orange.txt'
+    log = 'home/user/catkin_ws/log.txt'
     
     actions = {
-            '/radiation_sensor_plugin/sensor_0' : ('log', 1)
+            'chatter' : ('filter', 0)
     }
     monitor()
     websocket.enableTrace(False)
