@@ -48,7 +48,7 @@ def monitor():
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
-    if json_dict['verdict'] == 'true' or json_dict['verdict'] == 'currently_true' or json_dict['verdict'] == 'unknown':
+    if json_dict['verdict'] == 'true' or json_dict['verdict'] == 'currently_true' or json_dict['verdict'] == 'unknown' or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] > 1):
         if json_dict['verdict'] == 'true' and not pub_dict:
             rospy.loginfo('The monitor concluded the satisfaction of the property under analysis, and can be safely removed.')
             ws.close()
@@ -62,26 +62,26 @@ def on_message(ws, message):
             del dict_msgs[json_dict['time']]
     else:
         logging(json_dict)
-        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):
-            rospy.loginfo('The event ' + message + ' is inconsistent..')
-            error = MonitorError()
-            error.topic = json_dict['topic']
-            error.time = json_dict['time']
-            error.property = json_dict['spec']
-            error.content = str(dict_msgs[json_dict['time']])
-            pub_error.publish(error)
-            if json_dict['verdict'] == 'false' and not pub_dict:
-                rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
-                ws.close()
-                exit(0)
+        # if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):
+        rospy.loginfo('The event ' + message + ' is inconsistent..')
+        error = MonitorError()
+        error.topic = json_dict['topic']
+        error.time = json_dict['time']
+        error.property = json_dict['spec']
+        error.content = str(dict_msgs[json_dict['time']])
+        pub_error.publish(error)
+        if json_dict['verdict'] == 'false' and not pub_dict:
+            rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
+            ws.close()
+            exit(0)
         if actions[json_dict['topic']][0] != 'filter':
-            if json_dict['verdict'] == 'currently_false':
-                rospy.loginfo('The event ' + message + ' is consistent ')
+            # if json_dict['verdict'] == 'currently_false':
+                # rospy.loginfo('The event ' + message + ' is consistent ')
             topic = json_dict['topic']
             if topic in pub_dict:
                 pub_dict[topic].publish(dict_msgs[json_dict['time']])
             del dict_msgs[json_dict['time']]
-    	error = True
+    error = True
     pub_verdict.publish(json_dict['verdict'])
 
 def on_error(ws, error):

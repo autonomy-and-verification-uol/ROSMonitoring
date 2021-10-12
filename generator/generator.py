@@ -239,7 +239,7 @@ def on_message(ws, message):
             if topic in pub_dict:
                 pub_dict[topic].publish(ROS_message)'''
             other_callbacks += '''
-       error = True'''
+    error = True'''
             other_callbacks += '''
     pub_verdict.publish(json_dict['verdict'])
 

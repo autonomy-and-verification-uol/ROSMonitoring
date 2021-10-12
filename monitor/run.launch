@@ -1,7 +1,9 @@
 
 <launch>
         
-<node pkg="monitor" type="safety_distance.py" name="safety_distance" output="screen"/>
+<node pkg="monitor" type="radiation_monitor_orange.py" name="radiation_monitor_orange" output="screen"/>
+            
+<node pkg="monitor" type="radiation_monitor_red.py" name="radiation_monitor_red" output="screen"/>
             
 </launch>
         
