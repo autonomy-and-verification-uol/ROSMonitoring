@@ -5,7 +5,9 @@ The repository contains the Python implementation for integrating RML (Runtime M
 
 # Prerequisities
 
-ROSMonitoring works only for ROS distributions >= Groovy Galapagos.
+ROSMonitoring works only for ROS distributions starting with (including) Groovy Galapagos and before (excluding) Noetic Ninjemys.   
+Requires Ubuntu 18.04 or lower.   
+**We are working on porting ROSMonitoring to Python 3 so that it will be working on Ubuntu 20.04/ROS Noetic as well as future releases that are based around Python 3.**
 
 ## Pip (https://pypi.org/project/pip/)
 On Ubuntu 18.04 would be:
