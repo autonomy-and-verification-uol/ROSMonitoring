@@ -87,8 +87,10 @@ verify_end(TraceExp) :- may_halt(TraceExp) ->
 
 % verify one event and then proceed recursively
 verify_events(TraceStream, TraceExp, EventId) :-
-	json_read_dict(TraceStream, Event),
+	json_read_dict(TraceStream, Event, [end_of_file(empty{})]),
+	writeln(TraceExp), writeln(Event),
+	(Event=empty{} -> (verify_end(TraceExp));(
 	(next(TraceExp, Event, NewTraceExp)
-	 -> (log('matched event #'), log(EventId), lognl, NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
+	 -> (writeln('new:'),writeln(NewTraceExp), log('matched event #'), log(EventId), lognl, NewEventId is EventId+1, verify(TraceStream, NewTraceExp, NewEventId))
 	 ;  (log('ERROR on event '), dict_pairs(Event, _, Fields), log(Fields), lognl, false)
-	).
+	))).

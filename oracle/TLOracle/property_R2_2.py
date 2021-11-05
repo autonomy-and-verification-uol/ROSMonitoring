@@ -22,28 +22,24 @@
 
 import oracle
 
-
-# MTL property to verify
-# PROPERTY = "once[0:3](not {radiation_level_high})"
-PROPERTY = "once[0:3]{value < 120}"
-# In this case is Past-MTL, but it can also be a Past-LTL or Past-STL
+# property to verify
+PROPERTY = r'historically(({isTargetGrasped: true} -> {dx < 0.1, dy < 0.1, dz < 0.1, other_distances: true}) and ({trigger: false} -> {other_distances: true}))'
 
 # predicates used in the property (initialization for time 0)
 predicates = dict(
-    time = 0,
-    radiation_level_high = False
 )
 # in here we can add all the predicates we are interested in.. Of course, we also need to define how to translate Json messages to predicates.
 
 # function to abstract a dictionary (obtained from Json message) into a list of predicates
 def abstract_message(message):
-    return message
-    # if message['value'] >= 120.0:
-    #     predicates['radiation_level_high'] = True
-    # else:
-    #     predicates['radiation_level_high'] = False
-    # predicates['time'] = int(message['time'])
-    # return predicates
+    if 'd1' in message and 'd2' in message and 'd3' in message and 'd4' in message and 'd5' in message and 'd6' in message and 'd7' in message and 'd8' in message:
+        predicates['dx'] = message['d8']['x']
+        predicates['dy'] = message['d8']['y']
+        predicates['dz'] = message['d8']['z']
+        predicates['other_distances'] = (message['d1']['x'] != 0 or message['d1']['y'] != 0 or message['d1']['z'] != 0) and (message['d2']['x'] != 0 or message['d2']['y'] != 0 or message['d2']['z'] != 0) and (message['d3']['x'] != 0 or message['d3']['y'] != 0 or message['d3']['z'] != 0) and (message['d4']['x'] != 0 or message['d4']['y'] != 0 or message['d4']['z'] != 0) and (message['d5']['x'] != 0 or message['d5']['y'] != 0 or message['d5']['z'] != 0) and (message['d6']['x'] != 0 or message['d6']['y'] != 0 or message['d6']['z'] != 0) and (message['d7']['x'] != 0 or message['d7']['y'] != 0 or message['d7']['z'] != 0)
+    if 'isTargetGrasped' in message:
+        predicates['isTargetGrasped'] = message['isTargetGrasped']
+    return predicates
 # This function has to be defined by the user depending on the property defined.
 # In this case we have just implemented a simple and general function which
 # updates the predicates if it finds the topic in the list of predicates.

@@ -1,0 +1,13 @@
+monitors: # here we list the monitors we are going to generate
+  - monitor:
+      id: safety_distance_monitor
+      log: /catkin_ws/log_safety_distance.txt # file where the monitor will log the observed events
+      silent: True # we let the monitor to print info during its execution
+      oracle: # the oracle running and ready to check the specification (localhost in this case)
+        port: 8080 # the port where it is listening
+        url: 127.0.0.1 # the url where it is listening
+        action: nothing # the oracle will not change the message
+      topics: # the list of topics this monitor is going to intercept
+        - name: /front/scan # name of the topic
+          type: sensor_msgs.msg.LaserScan # type of the topic
+          action: log

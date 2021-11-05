@@ -167,7 +167,7 @@ def monitor():
 def on_message(ws, message):
     global error, log, actions
     json_dict = json.loads(message)
-    if json_dict['verdict'] == 'true' or json_dict['verdict'] == 'currently_true' or json_dict['verdict'] == 'unknown':
+    if json_dict['verdict'] == 'true' or json_dict['verdict'] == 'currently_true' or json_dict['verdict'] == 'unknown' or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] > 1):
         if json_dict['verdict'] == 'true' and not pub_dict:
             rospy.loginfo('The monitor concluded the satisfaction of the property under analysis, and can be safely removed.')
             ws.close()
@@ -194,35 +194,35 @@ def on_message(ws, message):
             other_callbacks += '''
     else:
         logging(json_dict)
-        if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):'''
+        # if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):'''
             if not silent:
                 other_callbacks += '''
-            rospy.loginfo('The event ' + message + ' is inconsistent..')'''
+        rospy.loginfo('The event ' + message + ' is inconsistent..')'''
             other_callbacks += '''
-            error = MonitorError()
-            error.topic = json_dict['topic']
-            error.time = json_dict['time']
-            error.property = json_dict['spec']'''
+        error = MonitorError()
+        error.topic = json_dict['topic']
+        error.time = json_dict['time']
+        error.property = json_dict['spec']'''
             if oracle_action == 'nothing':
                 other_callbacks += '''
-            error.content = str(dict_msgs[json_dict['time']])'''
+        error.content = str(dict_msgs[json_dict['time']])'''
             else:
                 other_callbacks += '''
-            json_dict_copy = json_dict.copy()
-            del json_dict_copy['topic']
-            del json_dict_copy['time']
-            del json_dict_copy['spec']
-            del json_dict_copy['error']
-            error.content = json.dumps(json_dict_copy)'''
+        json_dict_copy = json_dict.copy()
+        del json_dict_copy['topic']
+        del json_dict_copy['time']
+        del json_dict_copy['spec']
+        del json_dict_copy['error']
+        error.content = json.dumps(json_dict_copy)'''
             other_callbacks += '''
-            pub_error.publish(error)
-            if json_dict['verdict'] == 'false' and not pub_dict:
-                rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
-                ws.close()
-                exit(0)
+        pub_error.publish(error)
+        if json_dict['verdict'] == 'false' and not pub_dict:
+            rospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')
+            ws.close()
+            exit(0)
         if actions[json_dict['topic']][0] != 'filter':
-            if json_dict['verdict'] == 'currently_false':
-                rospy.loginfo('The event ' + message + ' is consistent ')
+            # if json_dict['verdict'] == 'currently_false':
+                # rospy.loginfo('The event ' + message + ' is consistent ')
             topic = json_dict['topic']'''
             if oracle_action == 'nothing':
                 other_callbacks += '''
@@ -239,7 +239,7 @@ def on_message(ws, message):
             if topic in pub_dict:
                 pub_dict[topic].publish(ROS_message)'''
             other_callbacks += '''
-    	error = True'''
+    error = True'''
             other_callbacks += '''
     pub_verdict.publish(json_dict['verdict'])
 

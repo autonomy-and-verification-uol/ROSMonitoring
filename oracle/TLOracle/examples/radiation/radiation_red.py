@@ -23,7 +23,8 @@
 import oracle
 
 # MTL property to verify
-PROPERTY = "(once[0:3](not {radiation_level_high}))"
+# PROPERTY = "(once[0:3](not {radiation_level_high}))"
+PROPERTY = "once[0:3]{value < 250.0}"
 # In this case is Past-MTL, but it can also be a Past-LTL or Past-STL
 
 # predicates used in the property (initialization for time 0)
@@ -35,12 +36,13 @@ predicates = dict(
 
 # function to abstract a dictionary (obtained from Json message) into a list of predicates
 def abstract_message(message):
-    if message['value'] >= 250.0:
-        predicates['radiation_level_high'] = True
-    else:
-        predicates['radiation_level_high'] = False
-    predicates['time'] = int(message['time'])
-    return predicates
+    return message
+    # if message['value'] >= 250.0:
+    #     predicates['radiation_level_high'] = True
+    # else:
+    #     predicates['radiation_level_high'] = False
+    # predicates['time'] = int(message['time'])
+    # return predicates
 # This function has to be defined by the user depending on the property defined.
 # In this case we have just implemented a simple and general function which
 # updates the predicates if it finds the topic in the list of predicates.

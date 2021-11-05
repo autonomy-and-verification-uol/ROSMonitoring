@@ -64,6 +64,8 @@ def message_received(client, server, message):
 def check_event(event):
 	global last_time, tl_oracle, property, last_res
 	event_dict = json.loads(event)
+	if 't' in event_dict and 'time' not in event_dict:
+		event_dict['time'] = event_dict['t']
 	if not tl_oracle:
 		if model == 'dense' and 'time' in event_dict:
 			tl_oracle = reelay.dense_timed_monitor(pattern = property.PROPERTY)
