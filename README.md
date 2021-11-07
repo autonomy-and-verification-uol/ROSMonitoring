@@ -7,7 +7,7 @@ The repository contains the Python implementation for integrating RML (Runtime M
 
 A Docker image containing ROSMonitoring is available with Ubuntu 18.04 and ROS Melodic.   
 A tutorial on how to use the Docker version of ROSMonitoring is available here: https://github.com/autonomy-and-verification-uol/ROSMonitoring/wiki/Running-ROSMonitoring-in-Docker   
-Otherwise, below we explain how to install ROSMonitoring normally (without Docker).
+Otherwise, below we explain how to install and use ROSMonitoring normally (without Docker).
 
 
 # Prerequisities
