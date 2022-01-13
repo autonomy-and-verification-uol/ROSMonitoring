@@ -1,0 +1,3 @@
+msg_tell matches {performative:'tell'};
+
+Main = (msg_tell)*;
