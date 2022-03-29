@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import oracle
 
 # property to verify
+# past "H hello"
+# future "G hello"
 PROPERTY = "G hello"
 
 # predicates used in the property (initialization for time 0)
