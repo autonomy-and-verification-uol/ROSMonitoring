@@ -83,7 +83,7 @@ class LamaConvOracle(object):
 			message_dict['verdict'] = 'true'
 		elif self.check_event(message) is False:
 			message_dict['verdict'] = 'false'
-			message_dict['spec'] = property.PROPERTY
+			message_dict['spec'] = self.property.PROPERTY
 		else:
 			message_dict['verdict'] = 'unkonwn'
 		server.send_message(client, json.dumps(message_dict))
