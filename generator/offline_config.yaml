@@ -38,6 +38,7 @@ monitors: # here we list the monitors we are going to generate
       id: monitor_0
       log: home/user/catkin_ws/log.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
+      warning : 1 # we let the monitor to publish error content through monitor_error topic otherwise (for warning:0), monitor_error does not publish anything.
       topics: # the list of topics this monitor is going to intercept (only one here)
         - name: chatter # name of the topic
           type: std_msgs.msg.String # type of the topic
