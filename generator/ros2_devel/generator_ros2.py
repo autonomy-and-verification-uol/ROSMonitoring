@@ -27,6 +27,7 @@ from jedi.inference.names import AbstractNameDefinition
 
 class MonitorGenerator():
     
+    
     def __init__(self):
         self.queue_size = 1000
         self.mon_pubs_dict_name = 'self.monitor_publishers'
@@ -34,6 +35,9 @@ class MonitorGenerator():
         self.config_subs_dict_name = 'self.config_subscribers'
         self.messages_dict_name = 'self.dict_msgs'
         self.threading_loc_name = 'self.ws_lock'
+        self.websocket_name = 'self.ws'
+        self.logging_fname = 'self.logging'
+        self.message_received_fname = 'self.on_message'
     
     
     def get_variable_init_lines(self):
@@ -137,12 +141,11 @@ class MonitorGenerator():
             return new_indent
                         
     
-    def create_callback_func(self,tname,tinfo,tmsg_type,silent,oracle_action):
+    def create_callback_func(self,tname,tinfo,tmsg_type,silent,oracle_action,oracle_url,oracle_port):
         tpname = tname
         if tinfo['remapped']:
             tpname = self.get_remapped_name(tpname)
-        baselineprefix = "\t"
-        lineprefix = baselineprefix
+        lineprefix = self.inc_indent('')
         func_input_varname = 'data'
         header = "def callback{tname}({0}):\n".format(func_input_varname)
         lines=[header]
@@ -165,13 +168,54 @@ class MonitorGenerator():
         line="{data_dict_name}['time']={ros_time}\n".format(data_dict_name=data_dict_name,ros_time=self.get_ros_time_line())
         lines.append(lineprefix+line)
         
-        # now we send things to the oracle or log them so we need to lock
+        line="{ws_lock}.acquire()\n".format(ws_lock=self.threading_loc_name)
+        lines.append(lineprefix+line)
+        # making sure we don't overwrite in the dictionary
         if oracle_action == 'nothing':
             line = "while {data_dname}['time'] in {msg_dname}:\n".format(data_dname = data_dict_name,msg_dname=self.messages_dict_name)
             lines.append(lineprefix+line)
-            lineprefix +="\t"
+            lineprefix =self.inc_indent(lineprefix)
             line = "{data_dname}['time']+=0.01\n".format(data_dname=data_dict_name)
             lines.append(lineprefix+line)
+            lineprefix = self.dec_indent(lineprefix)
+            
+        do_oracle = oracle_url != None and oracle_port !=None
+        log_msg = "event "
+        oracle_response_varname = "message"   
+        # if online monitor then we need to send things to the oracle
+        if do_oracle:
+            log_msg += "propagated to oracle"
+            line = "{ws}.send(json.dumps({data_dname})\n".format(ws=self.websocket_name,data_dname=data_dict_name)
+            lines.append(lineprefix+line)
+            if oracle_action == 'nothing':
+                line = "{msgs_dname}[{data_dname}['time']] = {input_varname}\n".format(msgs_dname=self.messages_dict_name,data_dname=data_dict_name,input_varname=func_input_varname)
+                lines.append(lineprefix+line)
+            line = "{msg}={ws}.recv()\n".format(msg=oracle_response_varname,ws=self.websocket_name)
+            lines.append(lineprefix+line)
+        else:
+            log_msg += "successfully logged"
+            line = "{logging_fname}({data_dname})".format(logging_fname=self.logging_fname,data_dname=data_dict_name)
+            lines.append(lineprefix+line)
+            if tinfo['republish']:
+                # if we need to republish then go ahead and do that
+                # TODO: add line here
+                line=""
+                
+        line = "{ws_lock}.release()".format(ws_lock = self.threading_loc_name)
+        lines.append(lineprefix+line)
+        
+        if not silent:
+            line = self.get_ros_info_logging_line(message)
+            lines.append(lineprefix+line)
+            
+        if do_oracle:
+            line = "{msg_fname}({msg_vname})".format(msg_fname=self.message_received_fname,msg_vname=oracle_response_varname)
+            lines.append(lineprefix+line)
+        
+                
+            
+            
+            
             
             
             
