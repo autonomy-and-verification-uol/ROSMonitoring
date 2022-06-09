@@ -29,24 +29,14 @@ import argparse
 
 from generator_ros2 import *
 
+
+# test using python generator_test.py --config online_config.yaml
+# or offline_config.yaml
+
 def test_monitor_gen(monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent, warning):
 	mongen = MonitorGenerator()
-	header = mongen.create_python_header()
-	print("header "+header)
-	tp_lists = mongen.get_topic_msg_types(topics_with_types_and_action)
-	print("Topic lists")
-	print(tp_lists)
-	print("Import lines")
-	import_lines = mongen.create_import_lines(tp_lists)
-	print(import_lines)
-	
-	print("Subscriber info")
-	subs=mongen.get_subscribers(topics_with_types_and_action)
-	print(subs)
-	print("Error verdict stuff")
-	pubs=mongen.create_inherent_monitor_publisher_lines(monitor_id)
-	print(pubs)
-	mongen.write_lines([header]+import_lines + pubs,monitor_id)
+	lines = mongen.create_mon_file_lines(topics_with_types_and_action,monitor_id,silent,oracle_action,url,port)
+	mongen.write_lines(lines,monitor_id)
 
 
 def main(argv):
