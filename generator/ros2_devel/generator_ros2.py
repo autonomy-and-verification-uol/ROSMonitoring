@@ -43,6 +43,75 @@ class MonitorGenerator():
         self.log_name_input = 'log'
         self.actions_name_input = 'actions'
         self.log_name = 'self.logfn'
+        self.pub_topics_name = 'self.publish_topics'
+        self.publish_topics = None
+        self.topics_info = 'self.topics_info'
+    
+
+
+    def create_on_message(self,silent,oracle_action,tp_lists):
+        lineprefix =''
+        msg_input_var = 'message'
+        header ="def {onmsgfunc}({msg_input}):\n".format(onmsgfunc = self.message_received_fname,msg_input = msg_input_var)
+        lines=[header]
+        
+        lineprefix = self.inc_indent(lineprefix)
+        jsondict = 'json_dict'
+        line = "{jd} = json.loads({invar})\n".format(jd=jsondict,invar=msg_input_var)
+        lines.append(lineprefix+line)
+        line = "verdict = {jd}['verdict']\n".format(jd=jsondict)
+        lines.append(lineprefix+line)
+        line = "if verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':\n"
+        lines.append(lineprefix+line)
+        
+        lineprefix = self.inc_indent(lineprefix)
+        
+        line = "if verdict == 'true' and not {pt_var}:\n".format(pt_var=self.pub_topics_name)
+        lines.append(lineprefix+line)
+        lineprefix=self.inc_indent(lineprefix)
+        msg = "'The monitor concluded the satisfaction of the property under analysis and can be safely removed.'"
+        line = self.get_ros_info_logging_line(msg)
+        lines.append(lineprefix+line)
+        line = "{ws}.close()\n".format(self.websocket_name)
+        lines.append(lineprefix+line)
+        line = "exit(0)\n"
+        lines.append(lineprefix+line)
+        
+        lineprefix = self.dec_indent(lineprefix)
+        line = "else:\n"
+        lines.append(lineprefix+line)
+        lineprefix = self.inc_indent(lineprefix)
+        line = "{logging_fname}({data_dname})\n".format(logging_fname=self.logging_fname, data_dname=jsondict)
+        lines.append(lineprefix+line)
+        line = "topic = {jsondict}['topic']\n".format(jsondict=jsondict)
+        lines.append(lineprefix+line)
+        
+        if not silent:
+            msg = "'The event {data} is consistent and republished'".format(data = msg_input_var)
+            line = self.get_ros_info_logging_line(msg)
+            lines.append(lineprefix+line)
+        if oracle_action == 'nothing':
+            line = "if topic in {pubdict}:\t".format(pubdict=self.config_pubs_dict_name)
+            lines.append(lineprefix+line)
+            lineprefix = self.inc_indent(lineprefix)
+            line = "{pubdict}[topic].publish({msgdict}[{jsond}['time']])\n".format(pubdict=self.config_pubs_dict_name,msgdict=self.messages_dict_name,jsond=jsondict)
+            lines.append(lineprefix+line)
+            line = "del {msgdict}[{jsond}['time']]\n".format(msgdict=self.messages_dict_name,jsond=jsondict)
+            lines.append(lineprefix+line)
+            lineprefix = self.dec_indent(lineprefix)
+        else:
+            lineprefix = self.inc_indent(lineprefix)
+            line = "del {jsond}['topic']\n".format(jsond=jsondict)
+            lines.append(lineprefix+line)
+            line = "del {jsond}['time']\n".format(jsond=jsondict)
+            lines.append(lineprefix+line)
+            line = "ROS_message = eval(msg_type)\n".format(msg_type=pt_lists[])
+            
+        
+        
+        
+        
+    
     
     def get_variable_init_lines(self):
         lines = [
@@ -53,7 +122,8 @@ class MonitorGenerator():
             "{varname}=Lock()\n".format(varname=self.threading_loc_name),
             "{0}={1}\n".format(self.monitor_id_vname,self.mon_name_input),
             
-            "{0}={1}\n".format(self.log_name,self.log_name_input)
+            "{0}={1}\n".format(self.log_name,self.log_name_input),
+            "{tpinfo}={}\n".format(tpinfo=self.topics_info)
             ]
         
         return lines
@@ -79,8 +149,21 @@ class MonitorGenerator():
         publines = self.create_config_publishers_lines(subscribers,tp_lists)
         lines = self.append_lines_to_list_with_prefix(lines, publines, lineprefix)
         
+        if self.publish_topics is not None:
+            line = "{pb}={val}\n".format(pb=self.pub_topics_name,val=self.publish_topics)
+            lines.append(lineprefix+line)
+        
+            
+        
+        
         
         return lines
+    
+    def create_topics_info_dict(self,tp_lists):
+        lines=[]
+        for t in tp_lists:
+            line = "{t_info_var}[{tname}]="
+    
     
     def append_lines_to_list_with_prefix(self,linelist,lines,lineprefix):
         for l in lines:
@@ -130,8 +213,9 @@ class MonitorGenerator():
     def create_python_header(self):
         return '#!/usr/bin/env python\n'
     
+    
+    
     ''' get the message types for the topics '''
-
     def get_topic_msg_types(self, topics_with_types_and_action):
         tp_lists = {}
         for topic_msg_details in topics_with_types_and_action:
@@ -200,6 +284,10 @@ class MonitorGenerator():
             if publishers[t] != None:
                 line = "{config_pub_dname}[{tname}]={publine}\n".format(config_pub_dname=self.config_pubs_dict_name,tname=t,publine=publishers[t])
                 lines.append(line)
+        if len(lines) == 0:
+            self.publish_topics = False
+        else:
+            self.publish_topics = True
         return lines
     
     def create_config_publishers_lines(self,subscribers,tp_lists):
