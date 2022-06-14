@@ -128,7 +128,7 @@ def create_monitor(monitor_id, topics_with_types_and_action, log, url, port, ora
                 other_callbacks += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(dict_msgs[json_dict['time']])\n\t\t\tdel dict_msgs[json_dict['time']]'''
             else:
                 other_callbacks += '''\n\t\t\tdel json_dict['topic']\n\t\t\tdel json_dict['time']\n\t\t\tROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)'''
-                other_callbacks += '''\n\t\t\ttopic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
+                other_callbacks += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
             other_callbacks += '''\n\telse:\n\t\tlogging(json_dict)\n\t\tif (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):'''
             if not silent:
                 other_callbacks += '''\n\t\t\trospy.loginfo('The event ' + message + ' is inconsistent..')'''
