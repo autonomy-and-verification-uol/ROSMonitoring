@@ -24,6 +24,7 @@ import os
 import yaml
 import xml.etree.ElementTree as ET
 from jedi.inference.names import AbstractNameDefinition
+from prompt_toolkit.layout.controls import GetLinePrefixCallable
 
 
 class MonitorGenerator():
@@ -46,13 +47,58 @@ class MonitorGenerator():
         self.pub_topics_name = 'self.publish_topics'
         self.publish_topics = None
         self.topics_info = 'self.topics_info'
+        self.indent_level=0
     
 
+    def reset_indent(self,msg):
+        print(msg+" Resetting indent level from {0} to 0".format(self.indent_level))
+        self.indent_level=0
+        
+    def check_indent(self,msg):
+        print(msg+" Indent level: {0}".format(self.indent_level))
+        
+    def create_logging_func(self):
+        self.reset_indent("logging func start")
+        lineprefix = ''
+        input_var = 'json_dict'
+        header = "def {logfuncname}({invar}):\n".format(logfuncname=self.logging_fname.replace("self.", ""),invar=input_var)
+        lines=[header]
+        
+        lineprefix = self.inc_indent(lineprefix)
+        line = "try:\n"
+        lines.append(lineprefix+line)
+        lineprefix = self.inc_indent(lineprefix)
+        line = "with open({logname},'a+') as log_file:\n".format(logname=self.log_name)
+        lines.append(lineprefix+line)
+        lineprefix = self.inc_indent(lineprefix)
+        line = "log_file.write(json.dumps({jd})+'\\n')\n".format(jd=input_var)
+        lines.append(lineprefix+line)
+        lineprefix = self.dec_indent(lineprefix)
+        msg = "'Event logged'"
+        line = self.get_ros_info_logging_line(msg)
+        lines.append(lineprefix+line)
+        lineprefix = self.dec_indent(lineprefix)
+        
+        
+        line="except:\n"
+        lines.append(lineprefix+line)
+        lineprefix = self.inc_indent(lineprefix)
+        msg = "'Unable to log the event'"
+        line = self.get_ros_info_logging_line(msg)
+        lines.append(lineprefix+line)
+        
+        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.dec_indent(lineprefix)
+        
+        self.check_indent("logging func done")
+        return lines
+        
 
     def create_on_message(self,silent,oracle_action,tp_lists):
+        self.reset_indent("on message func start")
         lineprefix =''
         msg_input_var = 'message'
-        header ="def {onmsgfunc}({msg_input}):\n".format(onmsgfunc = self.message_received_fname,msg_input = msg_input_var)
+        header ="def {onmsgfunc}({msg_input}):\n".format(onmsgfunc = self.message_received_fname.replace("self.",""),msg_input = msg_input_var)
         lines=[header]
         
         lineprefix = self.inc_indent(lineprefix)
@@ -72,7 +118,7 @@ class MonitorGenerator():
         msg = "'The monitor concluded the satisfaction of the property under analysis and can be safely removed.'"
         line = self.get_ros_info_logging_line(msg)
         lines.append(lineprefix+line)
-        line = "{ws}.close()\n".format(self.websocket_name)
+        line = "{ws}.close()\n".format(ws=self.websocket_name)
         lines.append(lineprefix+line)
         line = "exit(0)\n"
         lines.append(lineprefix+line)
@@ -91,11 +137,12 @@ class MonitorGenerator():
             line = self.get_ros_info_logging_line(msg)
             lines.append(lineprefix+line)
         if oracle_action == 'nothing':
-            line = "if topic in {pubdict}:\t".format(pubdict=self.config_pubs_dict_name)
+            line = "if topic in {pubdict}:\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
             lineprefix = self.inc_indent(lineprefix)
             line = "{pubdict}[topic].publish({msgdict}[{jsond}['time']])\n".format(pubdict=self.config_pubs_dict_name,msgdict=self.messages_dict_name,jsond=jsondict)
             lines.append(lineprefix+line)
+            lineprefix = self.dec_indent(lineprefix)
             line = "del {msgdict}[{jsond}['time']]\n".format(msgdict=self.messages_dict_name,jsond=jsondict)
             lines.append(lineprefix+line)
             lineprefix = self.dec_indent(lineprefix)
@@ -105,13 +152,121 @@ class MonitorGenerator():
             lines.append(lineprefix+line)
             line = "del {jsond}['time']\n".format(jsond=jsondict)
             lines.append(lineprefix+line)
-            line = "ROS_message = eval(msg_type)\n".format(msg_type=pt_lists[])
+            line = "ROS_message = eval({topicsinfo}[topic]['type']())\n".format(topicsinfo=self.topics_info)
+            lines.append(lineprefix+line)
+            line = "rosidl_runtime_py.set_message_fields(ROS_message,{jsond})\n".format(jsond=jsondict)
+            lines.append(lineprefix+line)
+           
+            line = "if topic in {pubdict}:\n".format(pubdict=self.config_pubs_dict_name)
+            lines.append(lineprefix+line)
+            lineprefix = self.inc_indent(lineprefix)
+            line = "{pubdict}.publish(ROS_message)\n".format(pubdict=self.config_pubs_dict_name)
+            lines.append(lineprefix+line)
+            lineprefix=self.dec_indent(lineprefix)
+            lineprefix=self.dec_indent(lineprefix)
+        
+        lineprefix = self.dec_indent(lineprefix)
+        
+        # in the else for the first if 
+        line = "else:\n"
+        lines.append(lineprefix+line)
+        lineprefix = self.inc_indent(lineprefix)
+        
+        # if the verdict is not ture or unknown 
+        line = "{logfunc}({jsond})\n".format(logfunc=self.logging_fname,jsond=jsondict)
+        lines.append(lineprefix+line)
+        
+        if not silent:
+            msg = "'The event' + {msg} + ' is inconsistent' ".format(msg=msg_input_var)
+            line = self.get_ros_info_logging_line(msg)
+            lines.append(lineprefix+line)
+        
+        manylines = ["error = MonitorError()\n",
+                     "error.m_topic = {0}['topic']\n".format(jsondict),
+                     "error.m_time = {0}['time']\n".format(jsondict),
+                     "error.m_property = {0}['spec']\n".format(jsondict),
+                     ]
+        lines=self.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
+        
+        if oracle_action == 'nothing':
+            line = "error.m_content = str({dmsgs}[{jsond}['time']])\n".format(dmsgs=self.messages_dict_name,jsond=jsondict)
+            lines.append(lineprefix+line)
+        else:
+            manylines = ["{jsond}_copy = {jsond}.copy()\n".format(jsond=jsondict),
+                         "del {jsond}_copy['topic']\n".format(jsond=jsondict),
+                         "del {jsond}_copy['time']\n".format(jsond=jsondict),
+                         "del {jsond}_copy['spec']\n".format(jsond=jsondict),
+                         "del {jsond}_copy['error']\n".format(jsond=jsondict),
+                         "error.m_content = json.dumps({jsond}_copy)\n".format(jsond=jsondict)
+                         ]
+            lines = self.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
+        line = "{monpubs}['error'].publish(error)\n".format(monpubs=self.mon_pubs_dict_name)
+        lines.append(lineprefix+line)
+        line = "if verdict == 'false' and not {pt_var}:\n".format(pt_var=self.pub_topics_name)
+        lines.append(lineprefix+line)
+        lineprefix = self.inc_indent(lineprefix)
+        
+        msg = "'The monitor concluded the violation of the property under analysis and can be safely removed.'"
+        line = self.get_ros_info_logging_line(msg)
+        lines.append(lineprefix+line)
+        line = "{ws}.close()\n".format(ws=self.websocket_name)
+        lines.append(lineprefix+line)
+        line = "exit(0)\n"
+        lines.append(lineprefix+line)
+        
+        lineprefix = self.dec_indent(lineprefix)
+        line = "if actions[{jsond}['topic']][0] != 'filter':\n".format(jsond=jsondict)
+        lines.append(lineprefix+line)
+        lineprefix = self.inc_indent(lineprefix)
+        line = "topic = {jsond}['topic']\n".format(jsond=jsondict)
+        lines.append(lineprefix+line)
+        
+        if oracle_action == 'nothing':
+            line = "if topic in {pubd}:\n".format(pubd=self.config_pubs_dict_name)
+            lines.append(lineprefix+line)
+            lineprefix = self.inc_indent(lineprefix)
+            line = "{pubd}[topic].publish({dmsgs}[{jsond}['time']])\n".format(pubd=self.config_pubs_dict_name, dmsgs=self.messages_dict_name,jsond=jsondict)
+            lines.append(lineprefix+line)
+            lineprefix = self.dec_indent(lineprefix)
+            line = "del {dmsgs}[{jsond}['time']]\n".format( dmsgs=self.messages_dict_name,jsond=jsondict)
+            lines.append(lineprefix+line)
             
+            
+        else:
+            manylines = [   "del {jsond}['topic']\n".format(jsond=jsondict),
+                         "del {jsond}['time']\n".format(jsond=jsondict),
+                         "del {jsond}['spec']\n".format(jsond=jsondict),
+                         "del {jsond}['error']\n".format(jsond=jsondict)
+                ]
+            lines=self.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
+            
+            line = "ROS_message = eval({topicsinfo}[topic]['type']())\n".format(topicsinfo=self.topics_info)
+            lines.append(lineprefix+line)
+            line = "rosidl_runtime_py.set_message_fields(ROS_message,{jsond})\n".format(jsond=jsondict)
+            lines.append(lineprefix+line)
+           
+            line = "if topic in {pubdict}:\n".format(pubdict=self.config_pubs_dict_name)
+            lines.append(lineprefix+line)
+            lineprefix = self.inc_indent(lineprefix)
+            line = "{pubdict}.publish(ROS_message)\n".format(pubdict=self.config_pubs_dict_name)
+            lines.append(lineprefix+line)
+            lineprefix = self.dec_indent(lineprefix)
+            
+        lineprefix = self.dec_indent(lineprefix)
+            
+        line="error=True\n"
+        lines.append(lineprefix+line)   
+        lineprefix = self.dec_indent(lineprefix)
+        line = "verdict_msg = String()\n"
+        lines.append(lineprefix+line)
+        line = "verdict_msg.data = verdict\n"
+        lines.append(lineprefix+line)
+        line = "{monpubs}['verdict'].publish(verdict_msg)\n".format(monpubs=self.mon_pubs_dict_name)
+        lines.append(lineprefix+line)
         
-        
-        
-        
-    
+        self.check_indent("on message func done")    
+        return lines
+            
     
     def get_variable_init_lines(self):
         lines = [
@@ -123,12 +278,13 @@ class MonitorGenerator():
             "{0}={1}\n".format(self.monitor_id_vname,self.mon_name_input),
             
             "{0}={1}\n".format(self.log_name,self.log_name_input),
-            "{tpinfo}={}\n".format(tpinfo=self.topics_info)
+            "{tpinfo}={{}}\n".format(tpinfo=self.topics_info)
             ]
         
         return lines
     
     def create_init_func(self,monitor_id,subscribers,tp_lists):
+        self.reset_indent("init func start")
         lineprefix = ''
         
         header = "def __init__(self,{0},{1},{2}):\n".format(self.mon_name_input,self.log_name_input,self.actions_name_input)
@@ -152,17 +308,20 @@ class MonitorGenerator():
         if self.publish_topics is not None:
             line = "{pb}={val}\n".format(pb=self.pub_topics_name,val=self.publish_topics)
             lines.append(lineprefix+line)
-        
             
+        tlines = self.create_topics_info_dict(tp_lists)
+        lines = self.append_lines_to_list_with_prefix(lines, tlines, lineprefix)
         
-        
-        
+        self.check_indent("init funct end")
         return lines
     
     def create_topics_info_dict(self,tp_lists):
         lines=[]
         for t in tp_lists:
-            line = "{t_info_var}[{tname}]="
+            line = "{t_info_var}[{tname}]={tdict}\n".format(t_info_var=self.topics_info,tname=t,tdict=tp_lists[t])
+            lines.append(line)
+            
+        return lines
     
     
     def append_lines_to_list_with_prefix(self,linelist,lines,lineprefix):
@@ -171,6 +330,7 @@ class MonitorGenerator():
         return linelist
      
     def create_mon_file_lines(self,topics_with_types_and_action,monitor_id,silent,oracle_action,oracle_url,oracle_port):
+        self.reset_indent("mon file creation start")
         lineprefix = ''
         lines = []
         new_line = '\n'
@@ -204,9 +364,20 @@ class MonitorGenerator():
             lines.append(new_line)
             lines=self.append_lines_to_list_with_prefix(lines, cblines, lineprefix)
         
+        # do on message 
+        lines.append(new_line)    
+        if oracle_url !=None and oracle_port != None:
+            on_message_lines = self.create_on_message(silent, oracle_action, tp_lists)
+            lines=self.append_lines_to_list_with_prefix(lines,on_message_lines,lineprefix)
             
+        lines.append(new_line)
         
+        # do logging 
+        logging_lines = self.create_logging_func()
+        lines=self.append_lines_to_list_with_prefix(lines, logging_lines, lineprefix)
+        lines.append(new_line)
         
+        self.check_indent("mon file creation func done")
         return lines
     
         
@@ -230,10 +401,10 @@ class MonitorGenerator():
                         'yaml',
                         'websocket',
                         'sys',
-                        'rclpy']
+                        'rclpy',
+                        'rosidl_runtime_py']
         from_import = {'rclpy.node':'Node',
                      'threading':'*',
-                     'rosidl_runtime_py':'message_converter',
                      'rosmonitoring_interfaces.msg':'MonitorError',
                      'std_msgs.msg':'String'}
         
@@ -311,9 +482,12 @@ class MonitorGenerator():
         return 'float(self.get_clock().now().to_msg().sec)'
     
     def inc_indent(self, current_indent):
+        self.indent_level+=1
         return current_indent + "\t"
     
     def dec_indent(self, current_indent):
+        if self.indent_level <=0:
+            print("Error with the indentation perhaps, trying to decrement an indent incorrectly")
         if current_indent == '':
             return current_indent
         else:
@@ -322,9 +496,11 @@ class MonitorGenerator():
             replacewith = ""
             maxreplace = 1
             new_indent = replacewith.join(current_indent.rsplit(toremove, maxreplace))
+            self.indent_level-=1
             return new_indent
     
     def create_callback_func(self, tname, tinfo, tmsg_type, silent, oracle_action, oracle_url, oracle_port):
+        self.reset_indent("callback func start")
         tpname = tname
         if tinfo['remapped']:
             tpname = self.get_remapped_name(tpname)
@@ -343,7 +519,7 @@ class MonitorGenerator():
             line = self.get_ros_info_logging_line(message)
             lines.append(lineprefix + line)
         # convert the data to send to the oracle or log
-        line = "{0}= message_converter.message_to_ordereddict({1})\n".format(data_dict_name, func_input_varname)
+        line = "{0}= rosidl_runtime_py.message_to_ordereddict({1})\n".format(data_dict_name, func_input_varname)
         lines.append(lineprefix + line)
         
         line = "{data_dict_name}['topic']='{tname}'\n".format(data_dict_name=data_dict_name, tname=tname)
@@ -368,7 +544,7 @@ class MonitorGenerator():
         oracle_response_varname = "message"   
         # if online monitor then we need to send things to the oracle
         if do_oracle:
-            log_msg += "propagated to oracle"
+            log_msg += "propagated to oracle" 
             line = "{ws}.send(json.dumps({data_dname}))\n".format(ws=self.websocket_name, data_dname=data_dict_name)
             lines.append(lineprefix + line)
             if oracle_action == 'nothing':
@@ -395,7 +571,8 @@ class MonitorGenerator():
         if do_oracle:
             line = "{msg_fname}({msg_vname})\n".format(msg_fname=self.message_received_fname, msg_vname=oracle_response_varname)
             lines.append(lineprefix + line)
-           
+        
+        self.check_indent("create callback func done")   
         return {'name':func_name, 'lines':lines}
         
     def ros_publisher_creation_command(self, pubname, pubtype, qsize):
