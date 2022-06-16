@@ -33,10 +33,10 @@ from generator_ros2 import *
 # test using python generator_test.py --config online_config.yaml
 # or offline_config.yaml
 
-def test_monitor_gen(monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent, warning):
+def test_monitor_gen(monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent, warning,monloc):
 	mongen = MonitorGenerator()
-	lines = mongen.create_mon_file_lines(topics_with_types_and_action,monitor_id,silent,oracle_action,url,port)
-	mongen.write_lines(lines,monitor_id)
+	lines = mongen.create_mon_file_lines(topics_with_types_and_action,monitor_id,silent,oracle_action,url,port,log)
+	mongen.codegenutils.write_lines(lines,monitor_id,monloc)
 
 
 def main(argv):
@@ -121,7 +121,16 @@ def main(argv):
                         warning = monitor['monitor']['warning']
                     else:
                         warning = 0
-                    test_monitor_gen(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent, warning)
+                        
+                    if 'location' in monitor['monitor']:
+                    	monloc = monitor['monitor']['location']
+                    	if '$pwd' in monloc:
+                    		pdir = os.getcwd() 
+                    		monloc = monloc.replace("$pwd",pdir)
+                    else:
+                    	monloc = os.getcwd()+"/"
+                    		
+                    test_monitor_gen(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent, warning,monloc)
                 #create_launch_file(ids)
                 #instrument_launch_files(nodes)
         except yaml.YAMLError as exc:

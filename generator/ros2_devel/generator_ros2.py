@@ -26,10 +26,88 @@ import xml.etree.ElementTree as ET
 from jedi.inference.names import AbstractNameDefinition
 from prompt_toolkit.layout.controls import GetLinePrefixCallable
 
+class CodeGenAndROSUtils():
 
+    # just for code gent 
+    def __init__(self):
+        self.indent_level = 0 
+        self.new_line = '\n'
+        
+    def reset_indent(self,msg):
+        print(msg+" Resetting indent level from {0} to 0".format(self.indent_level))
+        self.indent_level=0
+        
+    def check_indent(self,msg):
+        print(msg+" Indent level: {0}".format(self.indent_level))
+
+
+    def inc_indent(self, current_indent):
+        self.indent_level+=1
+        return current_indent + "\t"
+    
+    def dec_indent(self, current_indent):
+        if self.indent_level <=0:
+            print("Error with the indentation perhaps, trying to decrement an indent incorrectly")
+        if current_indent == '':
+            return current_indent
+        else:
+            # from https://stackoverflow.com/questions/2556108/rreplace-how-to-replace-the-last-occurrence-of-an-expression-in-a-string
+            toremove = "\t"
+            replacewith = ""
+            maxreplace = 1
+            new_indent = replacewith.join(current_indent.rsplit(toremove, maxreplace))
+            self.indent_level-=1
+            return new_indent
+    
+    
+    ''' this is an array of lines'''
+
+    def write_lines(self, lines, monitor_id,monloc):
+        with open( monloc+monitor_id + '.py', 'w') as mon:
+            for l in lines:
+                mon.write(l)
+        
+    def create_python_header(self):
+        return '#!/usr/bin/env python\n'    
+     
+     
+    def append_lines_to_list_with_prefix(self,linelist,lines,lineprefix):
+        for l in lines:
+            linelist.append(lineprefix+l)
+        return linelist
+    
+        
+    # ROS things 
+    def get_ros_info_logging_line(self, text):
+        return 'self.get_logger().info({0})\n'.format(text)
+    
+    def get_ros_time_line(self):
+        return 'float(self.get_clock().now().to_msg().sec)'
+
+        
+        
+        
+    def ros_subscriber_creation_command(self,subname,subtype,callbackname,qsize,doStringName=True):
+        if doStringName:
+            return "self.create_subscription(topic='{tname}',msg_type={ttype},callback={cbname},qos_profile={qs})\n".format(tname=subname,ttype=subtype,cbname=callbackname,qs=qsize)
+        else:
+            return "self.create_subscription(topic={tname},msg_type={ttype},callback={cbname},qos_profile={qs})\n".format(tname=subname,ttype=subtype,cbn=callbackname,qs=qsize)    
+        
+        
+    def ros_publisher_creation_command(self, pubname, pubtype, qsize, doStringName=True):
+        if doStringName:
+            return "self.create_publishers(topic='{tname}',msg_type={ttype},qos_profile={qs})\n".format(tname=pubname, ttype=pubtype, qs=qsize)
+        else:
+            return "self.create_publishers(topic={tname},msg_type={ttype},qos_profile={qs})\n".format(tname=pubname, ttype=pubtype, qs=qsize)
+    
+            
+        
 class MonitorGenerator():
     
+    
+    # initialising variable names for the class mostly 
     def __init__(self):
+        
         self.queue_size = 1000
         self.mon_pubs_dict_name = 'self.monitor_publishers'
         self.config_pubs_dict_name = 'self.config_publishers'
@@ -47,61 +125,141 @@ class MonitorGenerator():
         self.pub_topics_name = 'self.publish_topics'
         self.publish_topics = None
         self.topics_info = 'self.topics_info'
-        self.indent_level=0
+        self.codegenutils = CodeGenAndROSUtils()
+
+    # other helpful class related things 
+    def get_mon_class_name(self,monitor_id):
+        return "ROSMonitor_{0}".format(monitor_id)
+    
+    def create_class_header(self,monitor_id):
+        return "class {cn}(Node):\n".format(cn = self.get_mon_class_name(monitor_id))    
+
+    # things related to publishing and subscribing no function gen here 
+    
+    ''' get the message types for the topics '''
+    def get_topic_msg_types(self, topics_with_types_and_action):
+        tp_lists = {}
+        for topic_msg_details in topics_with_types_and_action:
+            package = topic_msg_details['type'][0:topic_msg_details['type'].rfind('.')]
+            type = topic_msg_details['type'][topic_msg_details['type'].rfind('.') + 1:]
+            topic = topic_msg_details['name']
+            tp_lists[topic] = {'package':package, 'type':type}
+        return tp_lists
+     
+    def get_subscribers(self, topics_with_types_and_action):
+        subscribers = {}
+        for tp_info in topics_with_types_and_action:
+            if 'publishers' in tp_info:
+                subscribers[tp_info['name']] = {'remapped':True, 'callback':True, 'republish':True}
+            elif 'subscribers' in tp_info:
+                subscribers[tp_info['name']] = {'remapped':False, 'callback':True, 'republish':True}
+            else:
+                subscribers[tp_info['name']] = {'remapped':False, 'callback':True, 'republish':False}
+        return subscribers
+
+    def get_remapped_name(self, name):
+        return name + "_mon"
+
+    # functions that generate lines of code but not whole functions
+    
+    def create_subscriber_line(self,name,tinfo,tmsg_type,cbname):
+        tpname = name
+        subtype = tmsg_type['type']
+        if tinfo['remapped']:
+            tpname = self.get_remapped_name(name)
+        line = self.codegenutils.ros_subscriber_creation_command(tpname, subtype, cbname, self.queue_size)
+        return line
+    
+    
+    def create_publisher_line(self, name, tinfo, tmsg_type):
+        if not tinfo['republish']:
+            return None
+        tpname = name 
+        if tinfo['remapped']:
+            # tpname = self.get_remapped_name(tpname)
+            pubtype = tmsg_type['type']
+            line = self.codegenutils.ros_publisher_creation_command(tpname, pubtype, self.queue_size)
+            return line
+        else:
+            return None
+    
+    def create_config_subscriber_lines(self,subscribers,tp_lists,cbdict):
+        lines = []
+        for t in subscribers:
+            subline = self.create_subscriber_line(t, subscribers[t], tp_lists[t], cbdict[t]['name'])
+            line = "{config_sub_name}[{tname}]={subline}\n".format(config_sub_name=self.config_subs_dict_name, tname = t, subline=subline)
+            lines.append(line)
+            
+        return lines
+            
+            
+    def create_config_publishers(self,subscribers,tp_lists):
+        publishers={}
+        for topic in subscribers:
+            publishers[topic] = self.create_publisher_line(topic, subscribers[topic], tp_lists[topic])
+            
+        return publishers
+    
+    def create_config_publishers_lines(self,subscribers,tp_lists):
+        lines = []
+        for t in subscribers:
+            publine = self.create_publisher_line(t, subscribers[t], tp_lists[t])
+            if publine is not None:
+                line = "{config_pub_dname}[{tname}]={publine}\n".format(config_pub_dname=self.config_pubs_dict_name,tname=t,publine=publine)
+                lines.append(line)
+        if len(lines) == 0:
+            self.publish_topics = False
+        else:
+            self.publish_topics = True
+        return lines
     
 
-    def reset_indent(self,msg):
-        print(msg+" Resetting indent level from {0} to 0".format(self.indent_level))
-        self.indent_level=0
-        
-    def check_indent(self,msg):
-        print(msg+" Indent level: {0}".format(self.indent_level))
         
     def create_logging_func(self):
-        self.reset_indent("logging func start")
+        self.codegenutils.reset_indent("logging func start")
         lineprefix = ''
         input_var = 'json_dict'
         header = "def {logfuncname}({invar}):\n".format(logfuncname=self.logging_fname.replace("self.", ""),invar=input_var)
         lines=[header]
         
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         line = "try:\n"
         lines.append(lineprefix+line)
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         line = "with open({logname},'a+') as log_file:\n".format(logname=self.log_name)
         lines.append(lineprefix+line)
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         line = "log_file.write(json.dumps({jd})+'\\n')\n".format(jd=input_var)
         lines.append(lineprefix+line)
-        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
         msg = "'Event logged'"
-        line = self.get_ros_info_logging_line(msg)
+        line = self.codegenutils.get_ros_info_logging_line(msg)
         lines.append(lineprefix+line)
-        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
         
         
         line="except:\n"
         lines.append(lineprefix+line)
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         msg = "'Unable to log the event'"
-        line = self.get_ros_info_logging_line(msg)
+        line = self.codegenutils.get_ros_info_logging_line(msg)
         lines.append(lineprefix+line)
         
-        lineprefix = self.dec_indent(lineprefix)
-        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
         
-        self.check_indent("logging func done")
+        self.codegenutils.check_indent("logging func done")
         return lines
         
 
     def create_on_message(self,silent,oracle_action,tp_lists):
-        self.reset_indent("on message func start")
+        self.codegenutils.reset_indent("on message func start")
         lineprefix =''
         msg_input_var = 'message'
         header ="def {onmsgfunc}({msg_input}):\n".format(onmsgfunc = self.message_received_fname.replace("self.",""),msg_input = msg_input_var)
         lines=[header]
         
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         jsondict = 'json_dict'
         line = "{jd} = json.loads({invar})\n".format(jd=jsondict,invar=msg_input_var)
         lines.append(lineprefix+line)
@@ -110,23 +268,23 @@ class MonitorGenerator():
         line = "if verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':\n"
         lines.append(lineprefix+line)
         
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         
         line = "if verdict == 'true' and not {pt_var}:\n".format(pt_var=self.pub_topics_name)
         lines.append(lineprefix+line)
-        lineprefix=self.inc_indent(lineprefix)
+        lineprefix=self.codegenutils.inc_indent(lineprefix)
         msg = "'The monitor concluded the satisfaction of the property under analysis and can be safely removed.'"
-        line = self.get_ros_info_logging_line(msg)
+        line = self.codegenutils.get_ros_info_logging_line(msg)
         lines.append(lineprefix+line)
         line = "{ws}.close()\n".format(ws=self.websocket_name)
         lines.append(lineprefix+line)
         line = "exit(0)\n"
         lines.append(lineprefix+line)
         
-        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
         line = "else:\n"
         lines.append(lineprefix+line)
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         line = "{logging_fname}({data_dname})\n".format(logging_fname=self.logging_fname, data_dname=jsondict)
         lines.append(lineprefix+line)
         line = "topic = {jsondict}['topic']\n".format(jsondict=jsondict)
@@ -134,20 +292,20 @@ class MonitorGenerator():
         
         if not silent:
             msg = "'The event {data} is consistent and republished'".format(data = msg_input_var)
-            line = self.get_ros_info_logging_line(msg)
+            line = self.codegenutils.get_ros_info_logging_line(msg)
             lines.append(lineprefix+line)
         if oracle_action == 'nothing':
             line = "if topic in {pubdict}:\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
-            lineprefix = self.inc_indent(lineprefix)
+            lineprefix = self.codegenutils.inc_indent(lineprefix)
             line = "{pubdict}[topic].publish({msgdict}[{jsond}['time']])\n".format(pubdict=self.config_pubs_dict_name,msgdict=self.messages_dict_name,jsond=jsondict)
             lines.append(lineprefix+line)
-            lineprefix = self.dec_indent(lineprefix)
+            lineprefix = self.codegenutils.dec_indent(lineprefix)
             line = "del {msgdict}[{jsond}['time']]\n".format(msgdict=self.messages_dict_name,jsond=jsondict)
             lines.append(lineprefix+line)
-            lineprefix = self.dec_indent(lineprefix)
+            lineprefix = self.codegenutils.dec_indent(lineprefix)
         else:
-            lineprefix = self.inc_indent(lineprefix)
+            lineprefix = self.codegenutils.inc_indent(lineprefix)
             line = "del {jsond}['topic']\n".format(jsond=jsondict)
             lines.append(lineprefix+line)
             line = "del {jsond}['time']\n".format(jsond=jsondict)
@@ -159,18 +317,18 @@ class MonitorGenerator():
            
             line = "if topic in {pubdict}:\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
-            lineprefix = self.inc_indent(lineprefix)
+            lineprefix = self.codegenutils.inc_indent(lineprefix)
             line = "{pubdict}.publish(ROS_message)\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
-            lineprefix=self.dec_indent(lineprefix)
-            lineprefix=self.dec_indent(lineprefix)
+            lineprefix=self.codegenutils.dec_indent(lineprefix)
+            lineprefix=self.codegenutils.dec_indent(lineprefix)
         
-        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
         
         # in the else for the first if 
         line = "else:\n"
         lines.append(lineprefix+line)
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         
         # if the verdict is not ture or unknown 
         line = "{logfunc}({jsond})\n".format(logfunc=self.logging_fname,jsond=jsondict)
@@ -178,7 +336,7 @@ class MonitorGenerator():
         
         if not silent:
             msg = "'The event' + {msg} + ' is inconsistent' ".format(msg=msg_input_var)
-            line = self.get_ros_info_logging_line(msg)
+            line = self.codegenutils.get_ros_info_logging_line(msg)
             lines.append(lineprefix+line)
         
         manylines = ["error = MonitorError()\n",
@@ -186,7 +344,7 @@ class MonitorGenerator():
                      "error.m_time = {0}['time']\n".format(jsondict),
                      "error.m_property = {0}['spec']\n".format(jsondict),
                      ]
-        lines=self.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
+        lines=self.codegenutils.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
         
         if oracle_action == 'nothing':
             line = "error.m_content = str({dmsgs}[{jsond}['time']])\n".format(dmsgs=self.messages_dict_name,jsond=jsondict)
@@ -199,35 +357,35 @@ class MonitorGenerator():
                          "del {jsond}_copy['error']\n".format(jsond=jsondict),
                          "error.m_content = json.dumps({jsond}_copy)\n".format(jsond=jsondict)
                          ]
-            lines = self.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
+            lines = self.codegenutils.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
         line = "{monpubs}['error'].publish(error)\n".format(monpubs=self.mon_pubs_dict_name)
         lines.append(lineprefix+line)
         line = "if verdict == 'false' and not {pt_var}:\n".format(pt_var=self.pub_topics_name)
         lines.append(lineprefix+line)
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         
         msg = "'The monitor concluded the violation of the property under analysis and can be safely removed.'"
-        line = self.get_ros_info_logging_line(msg)
+        line = self.codegenutils.get_ros_info_logging_line(msg)
         lines.append(lineprefix+line)
         line = "{ws}.close()\n".format(ws=self.websocket_name)
         lines.append(lineprefix+line)
         line = "exit(0)\n"
         lines.append(lineprefix+line)
         
-        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
         line = "if actions[{jsond}['topic']][0] != 'filter':\n".format(jsond=jsondict)
         lines.append(lineprefix+line)
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         line = "topic = {jsond}['topic']\n".format(jsond=jsondict)
         lines.append(lineprefix+line)
         
         if oracle_action == 'nothing':
             line = "if topic in {pubd}:\n".format(pubd=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
-            lineprefix = self.inc_indent(lineprefix)
+            lineprefix = self.codegenutils.inc_indent(lineprefix)
             line = "{pubd}[topic].publish({dmsgs}[{jsond}['time']])\n".format(pubd=self.config_pubs_dict_name, dmsgs=self.messages_dict_name,jsond=jsondict)
             lines.append(lineprefix+line)
-            lineprefix = self.dec_indent(lineprefix)
+            lineprefix = self.codegenutils.dec_indent(lineprefix)
             line = "del {dmsgs}[{jsond}['time']]\n".format( dmsgs=self.messages_dict_name,jsond=jsondict)
             lines.append(lineprefix+line)
             
@@ -238,7 +396,7 @@ class MonitorGenerator():
                          "del {jsond}['spec']\n".format(jsond=jsondict),
                          "del {jsond}['error']\n".format(jsond=jsondict)
                 ]
-            lines=self.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
+            lines=self.codegenutils.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
             
             line = "ROS_message = eval({topicsinfo}[topic]['type']())\n".format(topicsinfo=self.topics_info)
             lines.append(lineprefix+line)
@@ -247,16 +405,16 @@ class MonitorGenerator():
            
             line = "if topic in {pubdict}:\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
-            lineprefix = self.inc_indent(lineprefix)
+            lineprefix = self.codegenutils.inc_indent(lineprefix)
             line = "{pubdict}.publish(ROS_message)\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
-            lineprefix = self.dec_indent(lineprefix)
+            lineprefix = self.codegenutils.dec_indent(lineprefix)
             
-        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
             
         line="error=True\n"
         lines.append(lineprefix+line)   
-        lineprefix = self.dec_indent(lineprefix)
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
         line = "verdict_msg = String()\n"
         lines.append(lineprefix+line)
         line = "verdict_msg.data = verdict\n"
@@ -264,10 +422,10 @@ class MonitorGenerator():
         line = "{monpubs}['verdict'].publish(verdict_msg)\n".format(monpubs=self.mon_pubs_dict_name)
         lines.append(lineprefix+line)
         
-        self.check_indent("on message func done")    
+        self.codegenutils.check_indent("on message func done")    
         return lines
             
-    
+    # class init function 
     def get_variable_init_lines(self):
         lines = [
             "{dname}={{}}\n".format(dname=self.mon_pubs_dict_name),
@@ -283,36 +441,62 @@ class MonitorGenerator():
         
         return lines
     
-    def create_init_func(self,monitor_id,subscribers,tp_lists):
-        self.reset_indent("init func start")
+    def create_init_func(self,monitor_id,subscribers,tp_lists,config_callbacks,oracle_url,oracle_port):
+        self.codegenutils.reset_indent("init func start")
         lineprefix = ''
         
         header = "def __init__(self,{0},{1},{2}):\n".format(self.mon_name_input,self.log_name_input,self.actions_name_input)
         lines=[header]
         
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         
         v_init_lines = self.get_variable_init_lines()
-        lines = self.append_lines_to_list_with_prefix(lines, v_init_lines, lineprefix)
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, v_init_lines, lineprefix)
         
         # ros init line
         rosline = "super().__init__({monname})\n".format(monname=self.monitor_id_vname)
         lines.append(lineprefix+rosline)
         
         mon_publishers = self.create_inherent_monitor_publisher_lines()
-        lines = self.append_lines_to_list_with_prefix(lines, mon_publishers, lineprefix)
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, mon_publishers, lineprefix)
 
         publines = self.create_config_publishers_lines(subscribers,tp_lists)
-        lines = self.append_lines_to_list_with_prefix(lines, publines, lineprefix)
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, publines, lineprefix)
         
         if self.publish_topics is not None:
             line = "{pb}={val}\n".format(pb=self.pub_topics_name,val=self.publish_topics)
             lines.append(lineprefix+line)
             
         tlines = self.create_topics_info_dict(tp_lists)
-        lines = self.append_lines_to_list_with_prefix(lines, tlines, lineprefix)
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, tlines, lineprefix)
         
-        self.check_indent("init funct end")
+        # now we also need to create the subscribers 
+        # so if we have remapped a topic we need to subscribe to its remapped name 
+        # if not we just subscribe to the normal topic
+        slines = self.create_config_subscriber_lines(subscribers, tp_lists, config_callbacks)
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, slines, lineprefix)
+        
+        msg = "'Monitor' + {mname} + ' started and ready' ".format(mname=self.monitor_id_vname)
+        line = self.codegenutils.get_ros_info_logging_line(msg)
+        lines.append(lineprefix+line)
+        
+        msg = "'Logging at' + {logname} ".format(logname=self.log_name)
+        line = self.codegenutils.get_ros_info_logging_line(msg)
+        lines.append(lineprefix+line)
+        
+        if oracle_url != None and oracle_port != None:
+            wslines = [
+                "websocket.enableTrace(True)\n",
+                "{ws} = websocket.WebSocket()\n".format(ws=self.websocket_name),
+                "{ws}.connect('ws://{u}:{p}')\n".format(ws=self.websocket_name,u=oracle_url,p=oracle_port)
+                ]
+            lines = self.codegenutils.append_lines_to_list_with_prefix(lines,wslines,lineprefix)
+    
+            msg = "'Websocket is open'"
+            line = self.codegenutils.get_ros_info_logging_line(msg)
+            lines.append(lineprefix+line)
+        
+        self.codegenutils.check_indent("init funct end")
         return lines
     
     def create_topics_info_dict(self,tp_lists):
@@ -324,37 +508,31 @@ class MonitorGenerator():
         return lines
     
     
-    def append_lines_to_list_with_prefix(self,linelist,lines,lineprefix):
-        for l in lines:
-            linelist.append(lineprefix+l)
-        return linelist
-     
-    def create_mon_file_lines(self,topics_with_types_and_action,monitor_id,silent,oracle_action,oracle_url,oracle_port):
-        self.reset_indent("mon file creation start")
+
+    
+    
+    def create_mon_class_lines(self,topics_with_types_and_action,monitor_id,silent,oracle_action,oracle_url,oracle_port):
+        self.codegenutils.reset_indent("mon class creation start")
         lineprefix = ''
         lines = []
-        new_line = '\n'
+        new_line = self.codegenutils.new_line
         # create the python header 
-        h_line = self.create_python_header()
+        h_line = self.codegenutils.create_python_header()
         lines.append(lineprefix+h_line)
         lines.append(new_line)
         # add the import lines  
         tp_lists= self.get_topic_msg_types(topics_with_types_and_action)
         subscribers = self.get_subscribers(topics_with_types_and_action)
         i_lines = self.create_import_lines(tp_lists)
-        lines = self.append_lines_to_list_with_prefix(lines, i_lines, lineprefix)
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, i_lines, lineprefix)
         lines.append(new_line)
         # create the class header
         c_line = self.create_class_header(monitor_id)
         lines.append(lineprefix+c_line)
         lines.append(new_line)
         # increment the line prefix 
-        lineprefix = self.inc_indent(lineprefix)
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
         
-        # do the init funciton 
-        init_lines = self.create_init_func(monitor_id,subscribers,tp_lists)
-        lines = self.append_lines_to_list_with_prefix(lines, init_lines, lineprefix)
-        lines.append(new_line)
         
         # do the callbacks 
         config_callbacks = self.create_config_callbacks(subscribers, tp_lists, silent, oracle_action, oracle_url, oracle_port)
@@ -362,39 +540,98 @@ class MonitorGenerator():
         for t in config_callbacks:
             cblines = config_callbacks[t]['lines']
             lines.append(new_line)
-            lines=self.append_lines_to_list_with_prefix(lines, cblines, lineprefix)
+            lines=self.codegenutils.append_lines_to_list_with_prefix(lines, cblines, lineprefix)
+            
+            
+        lines.append(new_line)
+        # do the init funciton 
+        init_lines = self.create_init_func(monitor_id,subscribers,tp_lists,config_callbacks,oracle_url,oracle_port)
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, init_lines, lineprefix)
+        lines.append(new_line)
         
+               
         # do on message 
         lines.append(new_line)    
         if oracle_url !=None and oracle_port != None:
             on_message_lines = self.create_on_message(silent, oracle_action, tp_lists)
-            lines=self.append_lines_to_list_with_prefix(lines,on_message_lines,lineprefix)
+            lines=self.codegenutils.append_lines_to_list_with_prefix(lines,on_message_lines,lineprefix)
             
         lines.append(new_line)
         
         # do logging 
         logging_lines = self.create_logging_func()
-        lines=self.append_lines_to_list_with_prefix(lines, logging_lines, lineprefix)
+        lines=self.codegenutils.append_lines_to_list_with_prefix(lines, logging_lines, lineprefix)
         lines.append(new_line)
         
-        self.check_indent("mon file creation func done")
+        lineprefix = self.codegenutils.dec_indent(lineprefix)
+        self.codegenutils.check_indent("mon class creation func ")
+        return lines
+               
+    def create_mon_file_lines(self,topics_with_types_and_action,monitor_id,silent,oracle_action,oracle_url,oracle_port,log):
+        self.codegenutils.reset_indent("mon file func")
+        lineprefix = ''
+        lines = self.create_mon_class_lines(topics_with_types_and_action,monitor_id,silent,oracle_action,oracle_url,oracle_port)
+        
+        mlines = self.create_main_func_lines(topics_with_types_and_action,log,monitor_id)
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, mlines, lineprefix)
+        
+        lines.append(self.codegenutils.new_line)
+        mlines = self.create_python_main_lines()
+        lines = self.codegenutils.append_lines_to_list_with_prefix(lines, mlines, lineprefix)
+        
+        self.codegenutils.check_indent("mon file creation func done")
         return lines
     
+    
+    def create_main_func_lines(self,topics_with_types_and_action,log,monitor_id):
+        self.codegenutils.reset_indent("create main func ")
+        lineprefix = ''
+        header = "def main(args=None):\n"
+        lines = [header]
         
-    def create_python_header(self):
-        return '#!/usr/bin/env python\n'
+        lineprefix=self.codegenutils.inc_indent(lineprefix)
+        line = "rclpy.init(args=args)\n"
+        lines.append(lineprefix+line)
+        
+        line = "log = '{l}'\n".format(l=log)
+        lines.append(lineprefix+line)
+        
+        line = "actions = {}\n"
+        lines.append(lineprefix+line)
+        for tp in topics_with_types_and_action:
+            warning = 0 
+            if 'warning' in tp:
+                warning = tp['warning']
+            line = "actions['{tpn}']=('{act}',{w})\n".format(tpn=tp['name'],act=tp['action'],w=warning)
+            lines.append(lineprefix+line)
+        
+        line = "monitor = {mclassname}('{mid}',log,actions)\n".format(mclassname=self.get_mon_class_name(monitor_id),mid=monitor_id)
+        
+        lines.append(lineprefix+line)
+        mlines = ["rclpy.spin(monitor)\n",
+                "monitor.{wsname}.close()\n".format(wsname=self.websocket_name.replace("self.","")),
+                "monitor.destroy_node()\n",
+                "rclpy.shutdown()\n"
+                ]
+        lines=self.codegenutils.append_lines_to_list_with_prefix(lines, mlines, lineprefix)
+        
+        self.codegenutils.check_indent("create main func ")
+        return lines
+     
     
     
+    def create_python_main_lines(self):
+        self.codegenutils.reset_indent("create python main func ")
+        lineprefix = ''
+        lines = ["if __name__ == '__main__':\n"]
+        lineprefix = self.codegenutils.inc_indent(lineprefix)
+        line = "main()\n"
+        lines.append(lineprefix+line)
+        self.codegenutils.check_indent("create python main func ")
+        return lines   
     
-    ''' get the message types for the topics '''
-    def get_topic_msg_types(self, topics_with_types_and_action):
-        tp_lists = {}
-        for topic_msg_details in topics_with_types_and_action:
-            package = topic_msg_details['type'][0:topic_msg_details['type'].rfind('.')]
-            type = topic_msg_details['type'][topic_msg_details['type'].rfind('.') + 1:]
-            topic = topic_msg_details['name']
-            tp_lists[topic] = {'package':package, 'type':type}
-        return tp_lists
+
+
                   
     def create_import_lines(self, tp_lists):
         plain_import = ['json',
@@ -427,43 +664,8 @@ class MonitorGenerator():
         import_lines.append("# done import\n")
             
         return import_lines
-    
-    def create_class_header(self,monitor_id):
-        return "class ROSMonitor_{0}(Node):\n".format(monitor_id)
-    
-    def get_subscribers(self, topics_with_types_and_action):
-        subscribers = {}
-        for tp_info in topics_with_types_and_action:
-            if 'publishers' in tp_info:
-                subscribers[tp_info['name']] = {'remapped':True, 'callback':True, 'republish':True}
-            elif 'subscribers' in tp_info:
-                subscribers[tp_info['name']] = {'remapped':False, 'callback':True, 'republish':True}
-            else:
-                subscribers[tp_info['name']] = {'remapped':False, 'callback':True, 'republish':False}
-        return subscribers
-    
-    def create_config_publishers(self,subscribers,tp_lists):
-        publishers={}
-        for topic in subscribers:
-            publishers[topic] = self.create_publisher_line(topic, subscribers[topic], tp_lists[topic])
-            
-        return publishers
-    
-    def create_config_publishers_lines_from_dict(self,publishers):
-        lines = []
-        for t in publishers:
-            if publishers[t] != None:
-                line = "{config_pub_dname}[{tname}]={publine}\n".format(config_pub_dname=self.config_pubs_dict_name,tname=t,publine=publishers[t])
-                lines.append(line)
-        if len(lines) == 0:
-            self.publish_topics = False
-        else:
-            self.publish_topics = True
-        return lines
-    
-    def create_config_publishers_lines(self,subscribers,tp_lists):
-        publishers = self.create_config_publishers(subscribers,tp_lists)
-        return self.create_config_publishers_lines_from_dict(publishers)    
+
+  
         
     def create_config_callbacks(self, subscribers, tp_lists,silent,oracle_action,oracle_url,oracle_port):
         callbacks = {}
@@ -472,39 +674,14 @@ class MonitorGenerator():
             
         return callbacks
     
-    def get_remapped_name(self, name):
-        return name + "_mon"
-    
-    def get_ros_info_logging_line(self, text):
-        return 'self.get_logger().info({0})\n'.format(text)
-    
-    def get_ros_time_line(self):
-        return 'float(self.get_clock().now().to_msg().sec)'
-    
-    def inc_indent(self, current_indent):
-        self.indent_level+=1
-        return current_indent + "\t"
-    
-    def dec_indent(self, current_indent):
-        if self.indent_level <=0:
-            print("Error with the indentation perhaps, trying to decrement an indent incorrectly")
-        if current_indent == '':
-            return current_indent
-        else:
-            # from https://stackoverflow.com/questions/2556108/rreplace-how-to-replace-the-last-occurrence-of-an-expression-in-a-string
-            toremove = "\t"
-            replacewith = ""
-            maxreplace = 1
-            new_indent = replacewith.join(current_indent.rsplit(toremove, maxreplace))
-            self.indent_level-=1
-            return new_indent
-    
+
+
     def create_callback_func(self, tname, tinfo, tmsg_type, silent, oracle_action, oracle_url, oracle_port):
-        self.reset_indent("callback func start")
+        self.codegenutils.reset_indent("callback func start")
         tpname = tname
         if tinfo['remapped']:
             tpname = self.get_remapped_name(tpname)
-        lineprefix = self.inc_indent('')
+        lineprefix = self.codegenutils.inc_indent('')
         func_name = "callback{tname}".format(tname=tname)
         func_input_varname = 'data'
         header = "def {fname}({f_input}):\n".format(fname=func_name, f_input=func_input_varname)
@@ -516,7 +693,7 @@ class MonitorGenerator():
         if not silent:
             message = '"monitor has observed "+ str({0})'.format(func_input_varname)
             
-            line = self.get_ros_info_logging_line(message)
+            line = self.codegenutils.get_ros_info_logging_line(message)
             lines.append(lineprefix + line)
         # convert the data to send to the oracle or log
         line = "{0}= rosidl_runtime_py.message_to_ordereddict({1})\n".format(data_dict_name, func_input_varname)
@@ -525,7 +702,7 @@ class MonitorGenerator():
         line = "{data_dict_name}['topic']='{tname}'\n".format(data_dict_name=data_dict_name, tname=tname)
         lines.append(lineprefix + line)
         
-        line = "{data_dict_name}['time']={ros_time}\n".format(data_dict_name=data_dict_name, ros_time=self.get_ros_time_line())
+        line = "{data_dict_name}['time']={ros_time}\n".format(data_dict_name=data_dict_name, ros_time=self.codegenutils.get_ros_time_line())
         lines.append(lineprefix + line)
         
         line = "{ws_lock}.acquire()\n".format(ws_lock=self.threading_loc_name)
@@ -534,10 +711,10 @@ class MonitorGenerator():
         if oracle_action == 'nothing':
             line = "while {data_dname}['time'] in {msg_dname}:\n".format(data_dname=data_dict_name, msg_dname=self.messages_dict_name)
             lines.append(lineprefix + line)
-            lineprefix = self.inc_indent(lineprefix)
+            lineprefix = self.codegenutils.inc_indent(lineprefix)
             line = "{data_dname}['time']+=0.01\n".format(data_dname=data_dict_name)
             lines.append(lineprefix + line)
-            lineprefix = self.dec_indent(lineprefix)
+            lineprefix = self.codegenutils.dec_indent(lineprefix)
             
         do_oracle = oracle_url != None and oracle_port != None
         log_msg = "event "
@@ -565,28 +742,18 @@ class MonitorGenerator():
         lines.append(lineprefix + line)
         
         if not silent:
-            line = self.get_ros_info_logging_line('"{0}"'.format(log_msg))
+            line = self.codegenutils.get_ros_info_logging_line('"{0}"'.format(log_msg))
             lines.append(lineprefix + line)
             
         if do_oracle:
             line = "{msg_fname}({msg_vname})\n".format(msg_fname=self.message_received_fname, msg_vname=oracle_response_varname)
             lines.append(lineprefix + line)
         
-        self.check_indent("create callback func done")   
+        self.codegenutils.check_indent("create callback func done")   
         return {'name':func_name, 'lines':lines}
-        
-    def ros_publisher_creation_command(self, pubname, pubtype, qsize):
-        return "self.create_publishers(topic={tname},msg_type={ttype},qos_profile={qs})\n".format(tname=pubname, ttype=pubtype, qs=qsize)
     
-    def create_publisher_line(self, name, tinfo, tmsg_type):
-        if not tinfo['republish']:
-            return None
-        tpname = name 
-        if tinfo['remapped']:
-            tpname = self.get_remapped_name(tpname)
-        pubtype = tmsg_type['type']
-        line = self.ros_publisher_creation_command(tpname, pubtype, self.queue_size)
-        return line
+    
+
         
     def create_inherent_monitor_publisher_lines(self):
         pub_types = {'error':'MonitorError', 'verdict':'String'}
@@ -596,7 +763,7 @@ class MonitorGenerator():
         for pt in pub_types:
             pubname =  "{monname}+'/monitor_{pt}'".format(monname=self.monitor_id_vname,pt=pt)
             # "{}" + "'"+'/monitor_' + pt + "'"
-            ros_pub_creation_line = self.ros_publisher_creation_command(pubname, pub_types[pt], self.queue_size)
+            ros_pub_creation_line = self.codegenutils.ros_publisher_creation_command(pubname, pub_types[pt], self.queue_size,False)
             line = "{dictname}[{pubtype}]={ros_pub_line}\n".format(dictname=self.mon_pubs_dict_name, pubtype=pt, ros_pub_line=ros_pub_creation_line)
             lines.append(line)
         comments = "# done creating monitor publishers\n\n"
@@ -604,10 +771,5 @@ class MonitorGenerator():
 
         return lines
     
-    ''' this is an array of lines'''
 
-    def write_lines(self, lines, monitor_id):
-        with open('test_' + monitor_id + '.py', 'w') as mon:
-            for l in lines:
-                mon.write(l)
             
