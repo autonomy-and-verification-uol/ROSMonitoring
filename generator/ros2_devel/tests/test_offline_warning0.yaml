@@ -35,9 +35,9 @@ nodes: # here we list the nodes we are going to monitor
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: testmon_defaut_offline_warning0
-      location: $pwd/tests/monitors/
-      log: /home/parallels/code/ros2_rosmonintoring/ros2_code/logs/testmon_defaut_offline_warning0.txt # file where the monitor will log the observed events
+      id: testmon_default_offline_warning0
+      location: /home/parallels/code/ros2_rosmonintoring/ros2_code/src/monitor/monitor/
+      log: /home/parallels/code/ros2_rosmonintoring/ros2_code/logs/testmon_default_offline_warning0.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
       warning : 0 # we let the monitor to publish error content through monitor_error topic otherwise (for warning:0), monitor_error does not publish anything.
       topics: # the list of topics this monitor is going to intercept (only one here)

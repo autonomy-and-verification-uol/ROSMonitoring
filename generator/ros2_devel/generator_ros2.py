@@ -96,9 +96,9 @@ class CodeGenAndROSUtils():
         
     def ros_publisher_creation_command(self, pubname, pubtype, qsize, doStringName=True):
         if doStringName:
-            return "self.create_publishers(topic='{tname}',msg_type={ttype},qos_profile={qs})\n".format(tname=pubname, ttype=pubtype, qs=qsize)
+            return "self.create_publisher(topic='{tname}',msg_type={ttype},qos_profile={qs})\n".format(tname=pubname, ttype=pubtype, qs=qsize)
         else:
-            return "self.create_publishers(topic={tname},msg_type={ttype},qos_profile={qs})\n".format(tname=pubname, ttype=pubtype, qs=qsize)
+            return "self.create_publisher(topic={tname},msg_type={ttype},qos_profile={qs})\n".format(tname=pubname, ttype=pubtype, qs=qsize)
     
             
         
@@ -186,8 +186,8 @@ class MonitorGenerator():
     def create_config_subscriber_lines(self,subscribers,tp_lists,cbdict):
         lines = []
         for t in subscribers:
-            subline = self.create_subscriber_line(t, subscribers[t], tp_lists[t], cbdict[t]['name'])
-            line = "{config_sub_name}[{tname}]={subline}\n".format(config_sub_name=self.config_subs_dict_name, tname = t, subline=subline)
+            subline = self.create_subscriber_line(t, subscribers[t], tp_lists[t], 'self.'+cbdict[t]['name'])
+            line = "{config_sub_name}['{tname}']={subline}\n".format(config_sub_name=self.config_subs_dict_name, tname = t, subline=subline)
             lines.append(line)
             
         return lines
@@ -219,7 +219,7 @@ class MonitorGenerator():
         self.codegenutils.reset_indent("logging func start")
         lineprefix = ''
         input_var = 'json_dict'
-        header = "def {logfuncname}({invar}):\n".format(logfuncname=self.logging_fname.replace("self.", ""),invar=input_var)
+        header = "def {logfuncname}(self,{invar}):\n".format(logfuncname=self.logging_fname.replace("self.", ""),invar=input_var)
         lines=[header]
         
         lineprefix = self.codegenutils.inc_indent(lineprefix)
@@ -256,7 +256,7 @@ class MonitorGenerator():
         self.codegenutils.reset_indent("on message func start")
         lineprefix =''
         msg_input_var = 'message'
-        header ="def {onmsgfunc}({msg_input}):\n".format(onmsgfunc = self.message_received_fname.replace("self.",""),msg_input = msg_input_var)
+        header ="def {onmsgfunc}(self,{msg_input}):\n".format(onmsgfunc = self.message_received_fname.replace("self.",""),msg_input = msg_input_var)
         lines=[header]
         
         lineprefix = self.codegenutils.inc_indent(lineprefix)
@@ -291,7 +291,7 @@ class MonitorGenerator():
         lines.append(lineprefix+line)
         
         if not silent:
-            msg = "'The event {data} is consistent and republished'".format(data = msg_input_var)
+            msg = "'The event '+{data}+' is consistent and republished'".format(data = msg_input_var)
             line = self.codegenutils.get_ros_info_logging_line(msg)
             lines.append(lineprefix+line)
         if oracle_action == 'nothing':
@@ -305,7 +305,7 @@ class MonitorGenerator():
             lines.append(lineprefix+line)
             lineprefix = self.codegenutils.dec_indent(lineprefix)
         else:
-            lineprefix = self.codegenutils.inc_indent(lineprefix)
+            # lineprefix = self.codegenutils.inc_indent(lineprefix)
             line = "del {jsond}['topic']\n".format(jsond=jsondict)
             lines.append(lineprefix+line)
             line = "del {jsond}['time']\n".format(jsond=jsondict)
@@ -502,7 +502,7 @@ class MonitorGenerator():
     def create_topics_info_dict(self,tp_lists):
         lines=[]
         for t in tp_lists:
-            line = "{t_info_var}[{tname}]={tdict}\n".format(t_info_var=self.topics_info,tname=t,tdict=tp_lists[t])
+            line = "{t_info_var}['{tname}']={tdict}\n".format(t_info_var=self.topics_info,tname=t,tdict=tp_lists[t])
             lines.append(line)
             
         return lines
@@ -684,7 +684,7 @@ class MonitorGenerator():
         lineprefix = self.codegenutils.inc_indent('')
         func_name = "callback{tname}".format(tname=tname)
         func_input_varname = 'data'
-        header = "def {fname}({f_input}):\n".format(fname=func_name, f_input=func_input_varname)
+        header = "def {fname}(self,{f_input}):\n".format(fname=func_name, f_input=func_input_varname)
         lines = [header]
         
         data_dict_name = "dict"
@@ -764,7 +764,7 @@ class MonitorGenerator():
             pubname =  "{monname}+'/monitor_{pt}'".format(monname=self.monitor_id_vname,pt=pt)
             # "{}" + "'"+'/monitor_' + pt + "'"
             ros_pub_creation_line = self.codegenutils.ros_publisher_creation_command(pubname, pub_types[pt], self.queue_size,False)
-            line = "{dictname}[{pubtype}]={ros_pub_line}\n".format(dictname=self.mon_pubs_dict_name, pubtype=pt, ros_pub_line=ros_pub_creation_line)
+            line = "{dictname}['{pubtype}']={ros_pub_line}\n".format(dictname=self.mon_pubs_dict_name, pubtype=pt, ros_pub_line=ros_pub_creation_line)
             lines.append(line)
         comments = "# done creating monitor publishers\n\n"
         lines.append(comments)
