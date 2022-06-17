@@ -35,18 +35,18 @@ nodes: # here we list the nodes we are going to monitor
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
-      id: testmon_default_online_warning0
+      id: testmon_default_online_oracle_modify_log
       location: /home/parallels/code/ros2_rosmonintoring/ros2_code/src/monitor/monitor/
-      log: /home/parallels/code/ros2_rosmonintoring/ros2_code/logs/testmon_default_online_warning0.txt # file where the monitor will log the observed events
+      log: /home/parallels/code/ros2_rosmonintoring/ros2_code/logs/testmon_default_online_oracle_modify_log.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
-      warning: 0 #we let the monitor to publish error content through monitor_error topic otherwise (for warning:0), monitor_error does not publish anything.
+      warning: 1 #we let the monitor to publish error content through monitor_error topic otherwise (for warning:0), monitor_error does not publish anything.
       oracle: # the oracle running and ready to check the specification (localhost in this case)
         port: 8080 # the port where it is listening
         url: 127.0.0.1 # the url where it is listening
-        action: nothing # the oracle will not change the message
+        action: modify # the oracle will not change the message
       topics: # the list of topics this monitor is going to intercept
         - name: chatter # name of the topic
           type: std_msgs.msg.String # type of the topic
-          action: filter #
+          action: log #
           publishers:
             - talker

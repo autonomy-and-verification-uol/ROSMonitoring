@@ -121,6 +121,7 @@ class MonitorGenerator():
         self.mon_name_input = 'monitor_name'
         self.log_name_input = 'log'
         self.actions_name_input = 'actions'
+        self.actions_vname = 'self.actions'
         self.log_name = 'self.logfn'
         self.pub_topics_name = 'self.publish_topics'
         self.publish_topics = None
@@ -205,7 +206,7 @@ class MonitorGenerator():
         for t in subscribers:
             publine = self.create_publisher_line(t, subscribers[t], tp_lists[t])
             if publine is not None:
-                line = "{config_pub_dname}[{tname}]={publine}\n".format(config_pub_dname=self.config_pubs_dict_name,tname=t,publine=publine)
+                line = "{config_pub_dname}['{tname}']={publine}\n".format(config_pub_dname=self.config_pubs_dict_name,tname=t,publine=publine)
                 lines.append(line)
         if len(lines) == 0:
             self.publish_topics = False
@@ -263,7 +264,7 @@ class MonitorGenerator():
         jsondict = 'json_dict'
         line = "{jd} = json.loads({invar})\n".format(jd=jsondict,invar=msg_input_var)
         lines.append(lineprefix+line)
-        line = "verdict = {jd}['verdict']\n".format(jd=jsondict)
+        line = "verdict = str({jd}['verdict'])\n".format(jd=jsondict)
         lines.append(lineprefix+line)
         line = "if verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':\n"
         lines.append(lineprefix+line)
@@ -310,7 +311,9 @@ class MonitorGenerator():
             lines.append(lineprefix+line)
             line = "del {jsond}['time']\n".format(jsond=jsondict)
             lines.append(lineprefix+line)
-            line = "ROS_message = eval({topicsinfo}[topic]['type']())\n".format(topicsinfo=self.topics_info)
+            line = "del {jsond}['verdict']\n".format(jsond=jsondict)
+            lines.append(lineprefix+line)
+            line = "ROS_message = eval(''+{topicsinfo}[topic]['type']+'()')\n".format(topicsinfo=self.topics_info)
             lines.append(lineprefix+line)
             line = "rosidl_runtime_py.set_message_fields(ROS_message,{jsond})\n".format(jsond=jsondict)
             lines.append(lineprefix+line)
@@ -318,7 +321,7 @@ class MonitorGenerator():
             line = "if topic in {pubdict}:\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
             lineprefix = self.codegenutils.inc_indent(lineprefix)
-            line = "{pubdict}.publish(ROS_message)\n".format(pubdict=self.config_pubs_dict_name)
+            line = "{pubdict}[topic].publish(ROS_message)\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
             lineprefix=self.codegenutils.dec_indent(lineprefix)
             lineprefix=self.codegenutils.dec_indent(lineprefix)
@@ -354,7 +357,8 @@ class MonitorGenerator():
                          "del {jsond}_copy['topic']\n".format(jsond=jsondict),
                          "del {jsond}_copy['time']\n".format(jsond=jsondict),
                          "del {jsond}_copy['spec']\n".format(jsond=jsondict),
-                         "del {jsond}_copy['error']\n".format(jsond=jsondict),
+                         
+                         # "del {jsond}_copy['error']\n".format(jsond=jsondict),
                          "error.m_content = json.dumps({jsond}_copy)\n".format(jsond=jsondict)
                          ]
             lines = self.codegenutils.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
@@ -373,7 +377,7 @@ class MonitorGenerator():
         lines.append(lineprefix+line)
         
         lineprefix = self.codegenutils.dec_indent(lineprefix)
-        line = "if actions[{jsond}['topic']][0] != 'filter':\n".format(jsond=jsondict)
+        line = "if {actions}[{jsond}['topic']][0] != 'filter':\n".format(actions=self.actions_vname,jsond=jsondict)
         lines.append(lineprefix+line)
         lineprefix = self.codegenutils.inc_indent(lineprefix)
         line = "topic = {jsond}['topic']\n".format(jsond=jsondict)
@@ -394,11 +398,12 @@ class MonitorGenerator():
             manylines = [   "del {jsond}['topic']\n".format(jsond=jsondict),
                          "del {jsond}['time']\n".format(jsond=jsondict),
                          "del {jsond}['spec']\n".format(jsond=jsondict),
-                         "del {jsond}['error']\n".format(jsond=jsondict)
+                         "del {jsond}['verdict']\n".format(jsond=jsondict)
+                         # "del {jsond}['error']\n".format(jsond=jsondict)
                 ]
             lines=self.codegenutils.append_lines_to_list_with_prefix(lines, manylines, lineprefix)
             
-            line = "ROS_message = eval({topicsinfo}[topic]['type']())\n".format(topicsinfo=self.topics_info)
+            line = "ROS_message = eval(''+{topicsinfo}[topic]['type']+'()')\n".format(topicsinfo=self.topics_info)
             lines.append(lineprefix+line)
             line = "rosidl_runtime_py.set_message_fields(ROS_message,{jsond})\n".format(jsond=jsondict)
             lines.append(lineprefix+line)
@@ -406,7 +411,7 @@ class MonitorGenerator():
             line = "if topic in {pubdict}:\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
             lineprefix = self.codegenutils.inc_indent(lineprefix)
-            line = "{pubdict}.publish(ROS_message)\n".format(pubdict=self.config_pubs_dict_name)
+            line = "{pubdict}[topic].publish(ROS_message)\n".format(pubdict=self.config_pubs_dict_name)
             lines.append(lineprefix+line)
             lineprefix = self.codegenutils.dec_indent(lineprefix)
             
@@ -434,7 +439,7 @@ class MonitorGenerator():
             "{dname}={{}}\n".format(dname=self.messages_dict_name),
             "{varname}=Lock()\n".format(varname=self.threading_loc_name),
             "{0}={1}\n".format(self.monitor_id_vname,self.mon_name_input),
-            
+            "{0}={1}\n".format(self.actions_vname,self.actions_name_input),
             "{0}={1}\n".format(self.log_name,self.log_name_input),
             "{tpinfo}={{}}\n".format(tpinfo=self.topics_info)
             ]
