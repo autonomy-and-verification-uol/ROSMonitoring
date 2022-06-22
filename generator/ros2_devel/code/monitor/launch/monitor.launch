@@ -1,0 +1,1 @@
+<launch><node pkg="monitor" exec="testmon_offline_silent" name="testmon_offline_silent" output="screen" /></launch>

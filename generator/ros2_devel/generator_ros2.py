@@ -21,10 +21,15 @@
 # SOFTWARE.
 
 import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__),'code/monitor/'))
 import yaml
 import xml.etree.ElementTree as ET
 from jedi.inference.names import AbstractNameDefinition
 from prompt_toolkit.layout.controls import GetLinePrefixCallable
+from gi._gtktemplate import Child
+import setup_resources as sr
+
 
 class CodeGenAndROSUtils():
 
@@ -32,13 +37,16 @@ class CodeGenAndROSUtils():
     def __init__(self):
         self.indent_level = 0 
         self.new_line = '\n'
+        self.debug = False
         
     def reset_indent(self,msg):
-        print(msg+" Resetting indent level from {0} to 0".format(self.indent_level))
+        if self.debug:
+            print(msg+" Resetting indent level from {0} to 0".format(self.indent_level))
         self.indent_level=0
         
     def check_indent(self,msg):
-        print(msg+" Indent level: {0}".format(self.indent_level))
+        if self.debug:
+            print(msg+" Indent level: {0}".format(self.indent_level))
 
 
     def inc_indent(self, current_indent):
@@ -570,6 +578,7 @@ class MonitorGenerator():
         
         lineprefix = self.codegenutils.dec_indent(lineprefix)
         self.codegenutils.check_indent("mon class creation func ")
+        
         return lines
                
     def create_mon_file_lines(self,topics_with_types_and_action,monitor_id,silent,oracle_action,oracle_url,oracle_port,log):
@@ -776,5 +785,82 @@ class MonitorGenerator():
 
         return lines
     
+    
+    def create_package_xml(self,tp_lists,location):
+        
+        child_to_insert_after = 11
+        tree = ET.parse(location+".packagexml")
+        root = tree.getroot()
+        children = root.getchildren()
+        
+            
+        # so now we insert the relevant packages
+        pkgs_so_far = []
+        for t in tp_lists:
+            new_field = ET.Element("exec_depend")
+            if tp_lists[t]['package'] not in pkgs_so_far:
+                package,sep,tail = tp_lists[t]['package'].partition('.')
+                new_field .text=package
+                pkgs_so_far.append(package)
+            root.insert(child_to_insert_after,new_field)
+        
+        print ("Updated package.xml")    
+        # ET.dump(root)
+        tree.write(location+'package.xml')
+            
+            
+class LaunchFileGen(object):
+    
+    def create_node_node(self,fpkg,execfile,nodename,foutput="screen"):
+        return ET.Element("node", pkg=fpkg,exec=execfile,name=nodename,output=foutput)
+    
+    def create_launch_node(self):
+        return ET.Element("launch")
+    
+    def create_monitor_launch(self,monitor_ids,package_name):
+        root = self.create_launch_node()
+        for id in monitor_ids:
+            nodename = sr.script_name(id)
+            node_elem = self.create_node_node(package_name, nodename, nodename)
+            root.insert(0,node_elem)
+            
+        return root
+    
+    def write_monitor_launch(self,monitor_ids,package_name,loc):
+        root_elem = self.create_monitor_launch(monitor_ids, package_name)
+        self.write_launch_file(root_elem, loc+'monitor.launch')
+        
+    def write_launch_file(self,root_elem,locfn):
+        tree = ET.ElementTree(root_elem)
+        print("writing to "+locfn)
+        tree.write(locfn)
+    
+    
+    def instrument_node_launch_files(self,nodes):
+        launch_files={}
+        if not nodes:
+            return 
+        for name in nodes:
+            (package,path,topics) = nodes[name]
+            if path not in launch_files:
+                launch_files[path] = []
+            launch_files[path].append((name,package,topics))
+        for path in launch_files:
+            file_name = path.replace('.launch', '_instrumented.launch')
+            tree = ET.parse(path)
+            launch = tree.getroot()
+            for node in launch.findall('node'):
+                for (name, package, topics) in launch_files[path]:
+                    if node.get('name') == name and node.get('pkg') == package:
+                        for topic in topics:
+                            remap = ET.SubElement(node, 'remap')
+                            remap.set('from', topic)
+                            remap.set('to', topic + '_mon')
+                        break
+            self.write_launch_file(launch, file_name)    
+            
+               
+
+
 
             

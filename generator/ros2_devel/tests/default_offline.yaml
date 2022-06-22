@@ -23,6 +23,7 @@
 # Config file for the instrumentation of ROS
 # this file is given in input to generator
 #
+path: /home/parallels/code/ros2_rosmonintoring/ros2_code/src/
 nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
@@ -36,7 +37,6 @@ nodes: # here we list the nodes we are going to monitor
 monitors: # here we list the monitors we are going to generate
   - monitor:
       id: testmon_default_offline
-      location: /home/parallels/code/ros2_rosmonintoring/ros2_code/src/monitor/monitor/
       log: /home/parallels/code/ros2_rosmonintoring/ros2_code/logs/testmon_default_offline.txt # file where the monitor will log the observed events
       silent: False # we let the monitor to print info during its execution
       warning : 1 # we let the monitor to publish error content through monitor_error topic otherwise (for warning:0), monitor_error does not publish anything.
