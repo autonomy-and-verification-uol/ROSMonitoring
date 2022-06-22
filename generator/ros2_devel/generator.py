@@ -807,6 +807,14 @@ class MonitorGenerator():
         print ("Updated package.xml")    
         # ET.dump(root)
         tree.write(location+'package.xml')
+        
+    def generate_monitor_package(self,monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent, warning):
+        monloc = 'code/monitor/monitor/'
+        packageloc = 'code/monitor/'
+        lines = self.create_mon_file_lines(topics_with_types_and_action, monitor_id, silent, oracle_action, url, port, log)
+        tp_lists = self.get_topic_msg_types(topics_with_types_and_action)
+        self.codegenutils.write_lines(lines, monitor_id, monloc)
+        self.create_package_xml(tp_lists, packageloc)
             
             
 class LaunchFileGen(object):

@@ -20,7 +20,7 @@ print(offline_test_configs)
 
 try: 
 	for testconfig in offline_test_configs:
-		command = "python generator_test.py --config {0}".format(testconfig)
+		command = "python generator --config {0}".format(testconfig)
 		os.system(command)
 		print("Ran {0}".format(command))
 		input("press enter to continue")

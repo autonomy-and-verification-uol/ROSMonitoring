@@ -29,7 +29,7 @@ import argparse
 import shutil 
 import pathlib
 
-from generator_ros2 import *
+from generator import *
 
 # test using python generator_test.py --config online_config.yaml
 # or offline_config.yaml
@@ -60,14 +60,6 @@ def copy_dir(source, destination):
         else:
             shutil.copy2(str(s), str(d))
 
-def generate_monitor_package(monitor_id, topics_with_types_and_action, log, url, port, oracle_action, silent, warning):
-	monloc = 'code/monitor/monitor/'
-	packageloc = 'code/monitor/'
-	mongen = MonitorGenerator()
-	lines = mongen.create_mon_file_lines(topics_with_types_and_action, monitor_id, silent, oracle_action, url, port, log)
-	tp_lists = mongen.get_topic_msg_types(topics_with_types_and_action)
-	mongen.codegenutils.write_lines(lines, monitor_id, monloc)
-	mongen.create_package_xml(tp_lists, packageloc)
 
 
 def main(argv):
@@ -172,8 +164,8 @@ def main(argv):
 						warning = monitor['monitor']['warning']
 					else:
 						warning = 0
-					
-					generate_monitor_package(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent, warning)
+					monGen = MonitorGenerator()
+					monGen.generate_monitor_package(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent, warning)
 				lfg = LaunchFileGen()
 				launchpath = 'code/monitor/launch/'
 				lfg.write_monitor_launch(ids, 'monitor', launchpath)
