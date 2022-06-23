@@ -173,6 +173,7 @@ In the terminal:
 ```bash
  $ cd ~/
  $ git clone https://github.com/autonomy-and-verification-uol/ROSMonitoring.git
+ $ cd ROSMonitoring
  $ git checkout ros2
 ```
 Now you should have your local ROSMonitoring folder.
@@ -186,16 +187,16 @@ For customizing the monitors, we use a YAML configuration file. You can find dif
 The first we are going to see is: 'offline_config.yaml'
 
 ```yaml
-path: ~/dev_ws/src/ # this is the path to the ros workspace you'd like the monitor package in
+path: /home/parallels/dev_ws/src # this is the path to the ros workspace you'd like the monitor package in
 nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
       package: py_pubsub
-      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
+      path: /home/parallels/dev_ws/src/py_pubsub/run.launch
   - node:
       name: listener
       package: beginner_tutorials
-      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
+      path: /home/parallels/dev_ws/src/py_pubsub/run.launch
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
@@ -221,7 +222,17 @@ $ ./generator --config_file offline_config.yaml
 Going back to the 'dev_ws' folder, if we look into the 'src/monitor/monitor/' folder, we will find a new generated Python script called 'monitor_0.py'. This file contains the code for the monitor.
 Inside 'py_pubsub' we can also find now a new launch file called 'run_instrumented.launch'.
 
-Now, if we want to run our ROS nodes with the new monitor together. Since we are adding a new ROS package (the monitor package), we need also to re-run the colcon build command.
+Now, if we want to run our ROS nodes with the new monitor together. Since we are adding a new ROS package (the monitor package), we need also to re-run the colcon build command. Before we do this, we need to delete the build, install and log folders because we have just copied a C++ package and that might conflict with paths.
+```bash
+#to get rid of any errors
+$ rm -rf build 
+$ rm -rf install 
+$ rm -rf log
+#sourcing ros 2
+$ source /opt/ros/galactic/setup.bash 
+#building
+$ colcon build
+```
 
 Now we have everything we need to run the system along with the monitor.
 
@@ -229,13 +240,15 @@ In a terminal we do:
 
 ```bash
 $ cd ~/dev_ws/
-$ ros2 launch src/monitor/launch/run.launch
+$ . install/setup.bash
+$ ros2 launch src/monitor/launch/monitor.launch
 ```
 
 Then, in another terminal we do:
 
 ```bash
 $ cd ~/dev_ws/
+$ . install/setup.bash
 $ ros2 launch src/py_pubsub/run_instrumented.launch
 ```
 
@@ -303,16 +316,17 @@ Let's have a look at the other configuration file called: 'online_config.yaml'
 
 ```yaml
 
-path: ~/dev_ws/src # this is the path to the ros workspace you'd like the monitor package in
+
+path: /home/parallels/dev_ws/src/ # this is the path to the ros workspace you'd like the monitor package in
 nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
       package: py_pubsub
-      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
+      path: /home/parallels/dev_ws/src/py_pubsub/run.launch
   - node:
       name: listener
       package: py_pubsub
-      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
+      path: /home/parallels/dev_ws/src/py_pubsub/run.launch
 
 monitors: # here we list the monitors we are going to generate
   - monitor:

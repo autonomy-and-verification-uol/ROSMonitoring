@@ -60,7 +60,14 @@ def copy_dir(source, destination):
         else:
             shutil.copy2(str(s), str(d))
 
-
+def copytree(src, dst, symlinks=False, ignore=None):
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, symlinks, ignore)
+        else:
+            shutil.copy2(s, d)
 
 def main(argv):
 	
@@ -170,8 +177,9 @@ def main(argv):
 				launchpath = 'code/monitor/launch/'
 				lfg.write_monitor_launch(ids, 'monitor', launchpath)
 				lfg.instrument_node_launch_files(nodes)
-				# now that we are all done lets go copy the entire folder 
-				copy_dir('code/',packageloc)
+				# now that we are all done lets go copy the entire folder
+				print('copying files to '+monpath)
+				copytree('code/',monpath)
 				
 		except yaml.YAMLError as exc:
 			print(exc)
