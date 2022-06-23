@@ -100,54 +100,69 @@ It contains three Python files.
 # How to use ROSMonitoring (through an example extracted by ROS Tutorial)
 
 First things first..
-Before going on we need a machine with ROS installed. It is not important which ROS distribution, as long as rospy is supported.
+Before going on we need a machine with ROS installed. It is not important which ROS distribution, as long as rlcpy is supported.
 
-In the following we are going to use ROS Melodic with Catkin on Ubuntu 18.04, but as mentioned before, you can use any distribution starting from Groovy Galapagos.
-*Note: For ROS 2 we have used Galactic and Ubuntu 20.04 but it should work with other versions*
+In the following we are going to use ROS 2 Galactic with Colcon on Ubuntu 20.04, but as mentioned before, you can use any distribution.
 
-## Install ROS Melodic
+## Install ROS 2 Galactic
 
-http://wiki.ros.org/melodic/Installation
+https://docs.ros.org/en/galactic/Installation.html
 
-## Create a workspace for catkin
+## Create a workspace 
 
-http://wiki.ros.org/catkin/Tutorials/create_a_workspace
+https://docs.ros.org/en/galactic/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html
 
 ## Create ROS package
 
-http://wiki.ros.org/ROS/Tutorials/CreatingPackage
+https://docs.ros.org/en/galactic/Tutorials/Beginner-Client-Libraries/Creating-Your-First-ROS2-Package.html
 
-We need the 'beginner_tutorials' package, so do not forget to create it!
+
+
+We need the 'py_pubsub' package, so do not forget to create it!
 
 ## Writing simple Publisher and Subscriber using rospy
 
-http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28python%29
+https://docs.ros.org/en/galactic/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Py-Publisher-And-Subscriber.html
 
 At the end of this tutorial you should have the talker and listener node working.
-To run the example, follow the instructions at:
-
-http://wiki.ros.org/ROS/Tutorials/ExaminingPublisherSubscriber
 
 At the end of the tutorial, the talker and listener nodes should be able to communicate freely.
 
-In order to simplify the monitoring process and make it easier, we need to change a small thing inside talker.py.
+In order to simplify the monitoring process and make it easier, we need to change a small thing inside publisher_member_function.py
 
-Line 47 must become:
+(We're chaning the _topic_ name from 'topic' to 'chatter')
+Line 11 becomes: 
+```python 
+        self.publisher_ = self.create_publisher(String, 'chatter', 10)
+```
+
+
+(We're simplifying the output)
+Line 18 must become:
 ```python
 ...
-hello_str = "hello"
+msg.data = 'hello'
 ...
+```
+
+We also need to change the topic name in subscriber_member_function.py
+Line 13 becomes: 
+```python 
+        self.subscription = self.create_subscription(
+            String,
+            'chatter',
+            self.listener_callback,
+            10)
 ```
 
 The last thing to do is to add a launch file for running our nodes.
-Create a launch file called 'run.launch' inside the 'beginner_tutorials' folder, and paste the following XML inside it.
+Create a launch file called 'run.launch' inside the 'py_pubsub' folder, and paste the following XML inside it.
 ```xml
 <launch>
-    <node pkg="beginner_tutorials" type="talker.py" name="talker" output="screen"/>
-    <node pkg="beginner_tutorials" type="listener.py" name="listener" output="screen"/>
+    <node pkg="py_pubsub" exec="talker" name="talker" output="screen"/>
+    <node pkg="py_pubsub" exec="listener" name="listener" output="screen"/>
 </launch>
 ```
-
 Now we are ready to start monitoring our talker and listener nodes!
 
 ## Clone the ROSMonitoring repository
@@ -158,9 +173,11 @@ In the terminal:
 ```bash
  $ cd ~/
  $ git clone https://github.com/autonomy-and-verification-uol/ROSMonitoring.git
+ $ git checkout ros2
 ```
 Now you should have your local ROSMonitoring folder.
 *Note: Please checkout this branch for ROS 2*
+
 ### Create a simple Offline monitor
 
 The creation of a monitor is extremely flexible, and we can easily customize how many monitors, what they can do, and above all, what they are going to check (which topics, and so on).
@@ -169,16 +186,16 @@ For customizing the monitors, we use a YAML configuration file. You can find dif
 The first we are going to see is: 'offline_config.yaml'
 
 ```yaml
-path: ~/catkin_ws/src # this is the path to the ros workspace you'd like the monitor package in
+path: ~/dev_ws/src/ # this is the path to the ros workspace you'd like the monitor package in
 nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
-      package: beginner_tutorials
-      path: ~/catkin_ws/src/beginner_tutorials/run.launch
+      package: py_pubsub
+      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
   - node:
       name: listener
       package: beginner_tutorials
-      path: ~/catkin_ws/src/beginner_tutorials/run.launch
+      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
@@ -201,8 +218,8 @@ $ chmod +x generator
 $ ./generator --config_file offline_config.yaml
 ```
 
-Going back to the 'ROSMonitoring' folder, if we look into the 'monitor/src/' folder, we will find a new generated Python script called 'monitor_0.py'. This file contains the code for the monitor.
-Inside 'beginner_tutorials' we can also find now a new launch file called 'run_instrumented.launch'.
+Going back to the 'dev_ws' folder, if we look into the 'src/monitor/monitor/' folder, we will find a new generated Python script called 'monitor_0.py'. This file contains the code for the monitor.
+Inside 'py_pubsub' we can also find now a new launch file called 'run_instrumented.launch'.
 
 Now, if we want to run our ROS nodes with the new monitor together. Since we are adding a new ROS package (the monitor package), we need also to re-run the colcon build command.
 
@@ -211,20 +228,19 @@ Now we have everything we need to run the system along with the monitor.
 In a terminal we do:
 
 ```bash
-$ cd ~/catkin_ws/
-$ chmod +x src/monitor/src/monitor_0.py
-$ roslaunch src/monitor/run.launch
+$ cd ~/dev_ws/
+$ ros2 launch src/monitor/launch/run.launch
 ```
 
 Then, in another terminal we do:
 
 ```bash
-$ cd ~/catkin_ws/
-$ roslaunch src/beginner_tutorials/run_instrumented.launch
+$ cd ~/dev_ws/
+$ ros2 launch src/py_pubsub/run_instrumented.launch
 ```
 
 You should not notice any difference, even though now we have a monitor running along with the two other nodes.
-What is it actually happening? We have created and run an offline monitor. If we stop the nodes and the monitor, we should see that a new file has been created inside 'catkin_ws', called 'log.txt' (as we set in the config file).
+What is it actually happening? We have created and run an offline monitor. If we stop the nodes and the monitor, we should see that a new file has been created inside 'dev_ws', called 'log.txt' (as we set in the config file).
 
 We can find the automatically generated log file (log.txt) inside ~/catkin_ws folder.
 
@@ -287,16 +303,16 @@ Let's have a look at the other configuration file called: 'online_config.yaml'
 
 ```yaml
 
-path: ~/catkin_ws/src # this is the path to the ros workspace you'd like the monitor package in
+path: ~/dev_ws/src # this is the path to the ros workspace you'd like the monitor package in
 nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
-      package: beginner_tutorials
-      path: ~/catkin_ws/src/beginner_tutorials/run.launch
+      package: py_pubsub
+      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
   - node:
       name: listener
-      package: beginner_tutorials
-      path: ~/catkin_ws/src/beginner_tutorials/run.launch
+      package: py_pubsub
+      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
