@@ -1,0 +1,20 @@
+path: /home/parallels/dev_ws/src/ # this is the path to the ros workspace you'd like the monitor package in
+nodes: # here we list the nodes we are going to monitor
+  - node:
+      name: talker
+      package: py_pubsub
+      path: /home/parallels/dev_ws/src/py_pubsub/run.launch
+  - node:
+      name: listener
+      package: beginner_tutorials
+      path: /home/parallels/dev_ws/src/py_pubsub/run.launch
+
+monitors: # here we list the monitors we are going to generate
+  - monitor:
+      id: monitor_0
+      log: ./log.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      topics: # the list of topics this monitor is going to intercept (only one here)
+        - name: chatter # name of the topic
+          type: std_msgs.msg.String # type of the topic
+          action: log # the monitor will log the messages exchanged on this topic
