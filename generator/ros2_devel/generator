@@ -34,33 +34,15 @@ from generator import *
 # test using python generator_test.py --config online_config.yaml
 # or offline_config.yaml
 
-def copy_dir(source, destination):
-    destination_path: pathlib.Path
 
-    if isinstance(source, str):
-        source_path = pathlib.Path(source)
-    elif isinstance(source, pathlib.Path):
-        source_path = source
-
-    if isinstance(destination, str):
-        destination_path = pathlib.Path(destination)
-    elif isinstance(destination, pathlib.Path):
-        destination_path = destination
-
-    destination_path.mkdir(parents=True, exist_ok=True)
-    if source_path.is_dir():
-        destination_path = destination_path.joinpath(source_path.name)
-        destination_path.mkdir(parents=True, exist_ok=True)
-
-    for item in os.listdir(source_path):
-        s: pathlib.Path = source_path / item
-        d: pathlib.Path = destination_path / item
-        if s.is_dir():
-            copy_dir(s, d)
+def copytree(src, dst, symlinks=False, ignore=None):
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, symlinks, ignore)
         else:
-            shutil.copy2(str(s), str(d))
-
-
+            shutil.copy2(s, d)
 
 def main(argv):
 	
@@ -170,8 +152,9 @@ def main(argv):
 				launchpath = 'code/monitor/launch/'
 				lfg.write_monitor_launch(ids, 'monitor', launchpath)
 				lfg.instrument_node_launch_files(nodes)
-				# now that we are all done lets go copy the entire folder 
-				copy_dir('code/',packageloc)
+                # now that we are all done lets go copy the entire folder 
+                print('copying files to '+monpath)
+                copytree('code/',monpath)
 				
 		except yaml.YAMLError as exc:
 			print(exc)
