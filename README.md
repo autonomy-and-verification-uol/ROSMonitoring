@@ -186,16 +186,16 @@ For customizing the monitors, we use a YAML configuration file. You can find dif
 The first we are going to see is: 'offline_config.yaml'
 
 ```yaml
-path: ~/dev_ws/src/ # this is the path to the ros workspace you'd like the monitor package in
+path: /home/parallels/dev_ws/src # this is the path to the ros workspace you'd like the monitor package in
 nodes: # here we list the nodes we are going to monitor
   - node:
       name: talker
       package: py_pubsub
-      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
+      path: /home/parallels/dev_ws/src/py_pubsub/run.launch
   - node:
       name: listener
       package: beginner_tutorials
-      path: ~/dev_ws/src/py_pubsub/py_pubsub/run.launch
+      path: /home/parallels/dev_ws/src/py_pubsub/run.launch
 
 monitors: # here we list the monitors we are going to generate
   - monitor:
@@ -229,7 +229,7 @@ In a terminal we do:
 
 ```bash
 $ cd ~/dev_ws/
-$ ros2 launch src/monitor/launch/run.launch
+$ ros2 launch src/monitor/launch/monitor.launch
 ```
 
 Then, in another terminal we do:
