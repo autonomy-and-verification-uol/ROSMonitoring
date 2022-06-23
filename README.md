@@ -173,6 +173,7 @@ In the terminal:
 ```bash
  $ cd ~/
  $ git clone https://github.com/autonomy-and-verification-uol/ROSMonitoring.git
+ $ cd ROSMonitoring
  $ git checkout ros2
 ```
 Now you should have your local ROSMonitoring folder.
@@ -222,6 +223,16 @@ Going back to the 'dev_ws' folder, if we look into the 'src/monitor/monitor/' fo
 Inside 'py_pubsub' we can also find now a new launch file called 'run_instrumented.launch'.
 
 Now, if we want to run our ROS nodes with the new monitor together. Since we are adding a new ROS package (the monitor package), we need also to re-run the colcon build command. Before we do this, we need to delete the build, install and log folders because we have just copied a C++ package and that might conflict with paths.
+```bash
+#to get rid of any errors
+$ rm -rf build 
+$ rm -rf install 
+$ rm -rf log
+#sourcing ros 2
+$ source /opt/ros/galactic/setup.bash 
+#building
+$ colcon build
+```
 
 Now we have everything we need to run the system along with the monitor.
 
@@ -229,6 +240,7 @@ In a terminal we do:
 
 ```bash
 $ cd ~/dev_ws/
+$ . install/setup.bash
 $ ros2 launch src/monitor/launch/monitor.launch
 ```
 
@@ -236,6 +248,7 @@ Then, in another terminal we do:
 
 ```bash
 $ cd ~/dev_ws/
+$ . install/setup.bash
 $ ros2 launch src/py_pubsub/run_instrumented.launch
 ```
 
