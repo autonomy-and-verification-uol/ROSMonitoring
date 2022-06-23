@@ -128,21 +128,22 @@ def create_monitor(monitor_id, topics_with_types_and_action, log, url, port, ora
                 other_callbacks += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(dict_msgs[json_dict['time']])\n\t\t\tdel dict_msgs[json_dict['time']]'''
             else:
                 other_callbacks += '''\n\t\t\tdel json_dict['topic']\n\t\t\tdel json_dict['time']\n\t\t\tROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)'''
-                other_callbacks += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
-            other_callbacks += '''\n\telse:\n\t\tlogging(json_dict)\n\t\tif (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):'''
+                other_callbacks += '''\n\t\t\t if topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
+            other_callbacks += '''\n\telse:\n\t\tlogging(json_dict)\n\t\t#if (json_dict['verdict'] == 'false' and actions[json_dict['topic']][1] >= 1) or (json_dict['verdict'] == 'currently_false' and actions[json_dict['topic']][1] == 1):'''
+
             if not silent:
-                other_callbacks += '''\n\t\t\trospy.loginfo('The event ' + message + ' is inconsistent..')'''
-            other_callbacks += '''\n\t\t\terror = MonitorError()\n\t\t\terror.topic = json_dict['topic']\n\t\t\terror.time = json_dict['time']\n\t\t\terror.property = json_dict['spec']'''
+                other_callbacks += '''\n\t\trospy.loginfo('The event ' + message + ' is inconsistent..')'''
+            other_callbacks += '''\n\t\terror = MonitorError()\n\t\terror.topic = json_dict['topic']\n\t\terror.time = json_dict['time']\n\t\terror.property = json_dict['spec']'''
             if oracle_action == 'nothing':
-                other_callbacks += '''\n\t\t\terror.content = str(dict_msgs[json_dict['time']])'''
+                other_callbacks += '''\n\t\terror.content = str(dict_msgs[json_dict['time']])'''
             else:
-                other_callbacks += '''\n\t\t\tjson_dict_copy = json_dict.copy()\n\t\t\tdel json_dict_copy['topic']\n\t\t\tdel json_dict_copy['time']'''
-                other_callbacks+='''\n\t\t\tdel json_dict_copy['spec']\n\t\t\tdel json_dict_copy['error']\n\t\t\terror.content = json.dumps(json_dict_copy)'''
-            other_callbacks += '''\n\t\t\tpub_error.publish(error)\n\t\t\tif json_dict['verdict'] == 'false' and not pub_dict:'''
-            other_callbacks += '''\n\t\t\t\trospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')\n\t\t\t\tws.close()'''
-            other_callbacks += '''\n\t\t\t\texit(0)'''
+                other_callbacks += '''\n\t\tjson_dict_copy = json_dict.copy()\n\t\tdel json_dict_copy['topic']\n\t\tdel json_dict_copy['time']'''
+                other_callbacks+='''\n\t\tdel json_dict_copy['spec']\n\t\tdel json_dict_copy['error']\n\t\terror.content = json.dumps(json_dict_copy)'''
+            other_callbacks += '''\n\t\tpub_error.publish(error)\n\t\tif json_dict['verdict'] == 'false' and not pub_dict:'''
+            other_callbacks += '''\n\t\t\trospy.loginfo('The monitor concluded the violation of the property under analysis, and can be safely removed.')\n\t\t\tws.close()'''
+            other_callbacks += '''\n\t\t\texit(0)'''
             other_callbacks +='''\n\t\tif actions[json_dict['topic']][0] != 'filter':'''
-            other_callbacks +='''\n\t\t\tif json_dict['verdict'] == 'currently_false':\n\t\t\t\trospy.loginfo('The event ' + message + ' is consistent ')'''
+            other_callbacks +='''\n\t\t\t#if json_dict['verdict'] == 'currently_false':\n\t\t\t#rospy.loginfo('The event ' + message + ' is consistent ')'''
             other_callbacks +='''\n\t\t\ttopic = json_dict['topic']'''
             if oracle_action == 'nothing':
                 other_callbacks += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(dict_msgs[json_dict['time']])'''

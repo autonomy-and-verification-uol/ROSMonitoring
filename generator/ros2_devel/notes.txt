@@ -1,0 +1,37 @@
+# Finalising ROS(2)Monitoring
+
+## Creating a new ros ws
+
+1. Make a new directory and a src subfolder
+
+## Creating the MonitorError package 
+
+this is an interface in ROS2 and it's going to be a c++ package 
+
+1. ``` ros2 pkg create --build-type ament_cmake rosmonitoring_interfaces ```
+
+2. in here create a msg folder (not in the package src but in the package folder)
+
+3. make changes to package.xml and cmakelists 
+
+4. build 
+
+## Create the monitor package 
+
+follow the py_pubsub 
+then the interfaces part 
+things that you must add to the package.xml 
+
+``` <exec_depend>rosmonitoring_interfaces</exec_depend> ```
+
+
+
+
+so now we've got the basic structure down 
+
+now we work on automating stuff 
+
+## To automate 
+
+1. adding msg types to package.xml 
+2. adding monitor script names to setup.py 
