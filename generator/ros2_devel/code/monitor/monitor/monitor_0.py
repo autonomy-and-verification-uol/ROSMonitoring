@@ -24,9 +24,14 @@ class ROSMonitor_monitor_0(Node):
 		dict['topic']='chatter'
 		dict['time']=float(self.get_clock().now().to_msg().sec)
 		self.ws_lock.acquire()
-		self.logging(dict)
+		while dict['time'] in self.dict_msgs:
+			dict['time']+=0.01
+		self.ws.send(json.dumps(dict))
+		self.dict_msgs[dict['time']] = data
+		message=self.ws.recv()
 		self.ws_lock.release()
-		self.get_logger().info("event successfully logged")
+		self.get_logger().info("event propagated to oracle")
+		self.on_message_topic(message)
 
 	def callbackadd_two_ints_mon(self, request, response):
 		self.get_logger().info("monitor has observed a service request with "+ str(request))
@@ -35,11 +40,13 @@ class ROSMonitor_monitor_0(Node):
 		dict['service']='add_two_ints_mon'
 		dict['time']=float(self.get_clock().now().to_msg().sec)
 		self.ws_lock.acquire()
-		dict['verdict']='currently_true'
-		message=json.dumps(dict)
+		while dict['time'] in self.dict_msgs:
+			dict['time']+=0.01
+		self.ws.send(json.dumps(dict))
 		self.dict_msgs[dict['time']] = request
+		message=self.ws.recv()
 		self.ws_lock.release()
-		self.get_logger().info("event ")
+		self.get_logger().info("event propagated to oracle")
 		try:
 			return self.on_message_service_request(message)
 		except:
@@ -53,11 +60,13 @@ class ROSMonitor_monitor_0(Node):
 		dict['service']='add_two_ints_1_mon'
 		dict['time']=float(self.get_clock().now().to_msg().sec)
 		self.ws_lock.acquire()
-		dict['verdict']='currently_true'
-		message=json.dumps(dict)
+		while dict['time'] in self.dict_msgs:
+			dict['time']+=0.01
+		self.ws.send(json.dumps(dict))
 		self.dict_msgs[dict['time']] = request
+		message=self.ws.recv()
 		self.ws_lock.release()
-		self.get_logger().info("event ")
+		self.get_logger().info("event propagated to oracle")
 		try:
 			return self.on_message_service_request(message)
 		except:
@@ -99,8 +108,49 @@ class ROSMonitor_monitor_0(Node):
 
 		self.get_logger().info('Monitor' + self.name + ' started and ready' )
 		self.get_logger().info('Logging at' + self.logfn )
+		websocket.enableTrace(True)
+		self.ws = websocket.WebSocket()
+		self.ws.connect('ws://127.0.0.1:8080')
+		self.get_logger().info('Websocket is open')
 
 
+	def on_message_topic(self,message):
+		json_dict = json.loads(message)
+		verdict = str(json_dict['verdict'])
+		if verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':
+			if verdict == 'true' and not self.publish_topics:
+				self.get_logger().info('The monitor concluded the satisfaction of the property under analysis and can be safely removed.')
+				self.ws.close()
+				exit(0)
+			else:
+				self.logging(json_dict)
+				topic = json_dict['topic']
+				self.get_logger().info('The event '+message+' is consistent and republished')
+				if topic in self.config_publishers:
+					self.config_publishers[topic].publish(self.dict_msgs[json_dict['time']])
+				del self.dict_msgs[json_dict['time']]
+		else:
+			self.logging(json_dict)
+			self.get_logger().info('The event' + message + ' is inconsistent' )
+			error = MonitorError()
+			error.m_topic = json_dict['topic']
+			error.m_time = json_dict['time']
+			error.m_property = json_dict['spec']
+			error.m_content = str(self.dict_msgs[json_dict['time']])
+			self.monitor_publishers['error'].publish(error)
+			if verdict == 'false' and not self.publish_topics:
+				self.get_logger().info('The monitor concluded the violation of the property under analysis and can be safely removed.')
+				self.ws.close()
+				exit(0)
+			if self.actions[json_dict['topic']][0] != 'filter':
+				topic = json_dict['topic']
+				if topic in self.config_publishers:
+					self.config_publishers[topic].publish(self.dict_msgs[json_dict['time']])
+				del self.dict_msgs[json_dict['time']]
+			error=True
+		verdict_msg = String()
+		verdict_msg.data = verdict
+		self.monitor_publishers['verdict'].publish(verdict_msg)
 	def on_message_service_request(self,message):
 		json_dict = json.loads(message)
 		verdict = str(json_dict['verdict'])
@@ -114,8 +164,10 @@ class ROSMonitor_monitor_0(Node):
 				json_dict['response'] = rosidl_runtime_py.message_to_ordereddict(res)
 				self.dict_msgs[json_dict['time']] = res
 			del json_dict['request']
-			json_dict['verdict']='currently_true'
-			msg=json.dumps(json_dict)
+			self.ws_lock.acquire()
+			self.ws.send(json.dumps(json_dict))
+			msg=self.ws.recv()
+			self.ws_lock.release()
 			return self.on_message_service_response(msg)
 		else:
 			self.logging(json_dict)
@@ -124,6 +176,7 @@ class ROSMonitor_monitor_0(Node):
 			error.m_service = json_dict['service'].replace('_mon', '')
 			error.m_time = json_dict['time']
 			error.m_property = json_dict['spec']
+			error.m_content = str(self.dict_msgs[json_dict['time']])
 			self.monitor_publishers['error'].publish(error)
 			error=True
 		verdict_msg = String()
@@ -137,8 +190,10 @@ class ROSMonitor_monitor_0(Node):
 				json_dict['response'] = rosidl_runtime_py.message_to_ordereddict(res)
 			if 'verdict' in json_dict: del json_dict['verdict']
 			del json_dict['request']
-			json_dict['verdict']='currently_true'
-			msg=json.dumps(json_dict)
+			self.ws_lock.acquire()
+			self.ws.send(json.dumps(json_dict))
+			msg=self.ws.recv()
+			self.ws_lock.release()
 			return self.on_message_service_response(msg)
 		else:
 			raise Exception('The request violates the monitor specification, so it has been filtered out.')
@@ -148,7 +203,6 @@ class ROSMonitor_monitor_0(Node):
 		verdict = str(json_dict['verdict'])
 		service = json_dict['service'] = json_dict['service'].replace('_mon', '')
 		if verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':
-			del json_dict['verdict']
 			self.logging(json_dict)
 			self.get_logger().info('The response '+message+' is consistent, the result is returned')
 			return self.dict_msgs[json_dict['time']]
@@ -159,11 +213,7 @@ class ROSMonitor_monitor_0(Node):
 			error.m_service = json_dict['service'].replace('_mon', '')
 			error.m_time = json_dict['time']
 			error.m_property = json_dict['spec']
-			json_dict_copy = json_dict.copy()
-			del json_dict_copy['service']
-			del json_dict_copy['time']
-			del json_dict_copy['spec']
-			error.m_content = json.dumps(json_dict_copy)
+			error.m_content = str(self.dict_msgs[json_dict['time']])
 			self.monitor_publishers['error'].publish(error)
 			error=True
 		verdict_msg = String()
@@ -171,6 +221,7 @@ class ROSMonitor_monitor_0(Node):
 		self.monitor_publishers['verdict'].publish(verdict_msg)
 		if self.actions[json_dict['service']][0] != 'filter':
 			service = json_dict['service'] = json_dict['service'].replace('_mon', '')
+			return self.dict_msgs[json_dict['time']]
 		else:
 			raise Exception('The request violates the monitor specification, so it has been filtered out.')
 

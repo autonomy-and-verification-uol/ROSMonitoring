@@ -23,7 +23,7 @@
 import oracle
 
 # property to verify
-PROPERTY = "{time <= 0}"
+PROPERTY = "{time >= 0}"
 
 # predicates used in the property (initialization for time 0)
 predicates = dict(
