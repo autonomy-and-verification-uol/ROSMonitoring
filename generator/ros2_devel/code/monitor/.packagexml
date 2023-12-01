@@ -4,7 +4,7 @@
   <name>monitor</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="ffaruq@gmail.com">parallels</maintainer>
+  <maintainer email="angelo.ferrando42@gmail.com">parallels</maintainer>
   <license>TODO: License declaration</license>
 
   <test_depend>ament_copyright</test_depend>

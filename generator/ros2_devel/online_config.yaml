@@ -25,3 +25,4 @@ monitors: # here we list the monitors we are going to generate
           action: filter
           publishers:
            - talker
+      

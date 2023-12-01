@@ -117,8 +117,8 @@ def main(argv):
 				ids = []
 				for monitor in config['monitors']:
 
-					if 'id' not in monitor['monitor'] or 'topics' not in monitor['monitor'] or 'log' not in monitor['monitor']:
-						print('Each monitor in the configuration file must contain the id, when, log and the list of the topics fields.')
+					if 'id' not in monitor['monitor'] or ('topics' not in monitor['monitor'] and 'services' not in monitor['monitor']) or 'log' not in monitor['monitor']:
+						print('Each monitor in the configuration file must contain the id, log and list of the topics (or services) fields.')
 						return
 					if 'oracle' in monitor['monitor']  and ('port' not in monitor['monitor']['oracle'] or 'url' not in monitor['monitor']['oracle'] or 'action' not in monitor['monitor']['oracle']):
 						print('Url, port and action must be specified inside the oracle.')
@@ -148,6 +148,13 @@ def main(argv):
 									print('The subscriber ' + subscriber + ' has not been defined in the list of nodes.')
 									return
 								nodes[subscriber][2].append(topic_with_types_and_action['name'])
+					for service_with_types_and_action in monitor['monitor']['services']:
+						if 'name' not in service_with_types_and_action or 'type' not in service_with_types_and_action or 'action' not in service_with_types_and_action:
+							print('Each service needs a name, a type and an action.')
+							return
+						if service_with_types_and_action['action'] not in ['log', 'filter']:
+							print('The actions available for the services are: log, filter.')
+							return
 					if 'oracle' in monitor['monitor']:
 						url = monitor['monitor']['oracle']['url']
 						port = monitor['monitor']['oracle']['port']
@@ -155,8 +162,8 @@ def main(argv):
 						if not isinstance(url, str) or not isinstance(port, int):
 							print('The url must be a string and port must be an integer.')
 							return
-						if oracle_action not in ['nothing', 'modify']:
-							print('The actions available for the oracle are: nothing, modify.')
+						if oracle_action not in ['nothing']:
+							print('The actions available for the oracle are: nothing.')
 							return
 					else:
 						url = None
@@ -172,7 +179,7 @@ def main(argv):
 					else:
 						warning = 0
 					monGen = MonitorGenerator()
-					monGen.generate_monitor_package(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent, warning)
+					monGen.generate_monitor_package(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['services'], monitor['monitor']['log'], url, port, oracle_action, silent, warning)
 				lfg = LaunchFileGen()
 				launchpath = 'code/monitor/launch/'
 				lfg.write_monitor_launch(ids, 'monitor', launchpath)
