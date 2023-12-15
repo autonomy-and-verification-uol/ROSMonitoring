@@ -123,6 +123,10 @@ def main(argv):
 					if 'oracle' in monitor['monitor']  and ('port' not in monitor['monitor']['oracle'] or 'url' not in monitor['monitor']['oracle'] or 'action' not in monitor['monitor']['oracle']):
 						print('Url, port and action must be specified inside the oracle.')
 						return
+					if 'topics' not in monitor['monitor']:
+						monitor['monitor']['topics'] = []
+					if 'services' not in monitor['monitor']:
+						monitor['monitor']['services'] = []
 					for topic_with_types_and_action in monitor['monitor']['topics']:
 						if 'name' not in topic_with_types_and_action or 'type' not in topic_with_types_and_action or 'action' not in topic_with_types_and_action:
 							print('Each topic needs a name, a type and an action.')

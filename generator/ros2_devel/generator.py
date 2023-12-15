@@ -204,10 +204,10 @@ class MonitorGenerator():
     
     def create_server_service_line(self,name,sinfo,smsg_type,cbname):
         srvname = name
-        subtype = smsg_type['type']
+        srvtype = smsg_type['type']
         if sinfo['remapped']:
             srvname = self.get_remapped_name(name)
-        line = self.codegenutils.ros_server_service_creation_command(srvname, subtype, cbname)
+        line = self.codegenutils.ros_server_service_creation_command(srvname, srvtype, cbname)
         return line
     
     # Old one
@@ -284,7 +284,7 @@ class MonitorGenerator():
     def create_config_client_services_lines(self,services,srv_lists):
         lines = []
         for s in services:
-            srvline = "ServiceNode('{srvname}')".format(srvname=s)
+            srvline = "ServiceNode({srvtype},'{srvname}')".format(srvtype=srv_lists[s]['type'], srvname=s)
             if srvline is not None:
                 line = "{config_srvs_dname}['{srvname}']={srvline}\n".format(config_srvs_dname=self.config_client_srvs_dict_name,srvname=s,srvline=srvline)
                 lines.append(line)
@@ -1005,12 +1005,12 @@ class MonitorGenerator():
         line = "class ServiceNode(Node):\n"
         lines.append(lineprefix + line)
         lineprefix = self.codegenutils.inc_indent(lineprefix)
-        line = "def __init__(self, service_name):\n"
+        line = "def __init__(self, service_type, service_name):\n"
         lines.append(lineprefix + line)
         lineprefix = self.codegenutils.inc_indent(lineprefix)
         line = "super().__init__('service_node_' + service_name)\n"
         lines.append(lineprefix + line)
-        line = "self.cli = self.create_client(AddTwoInts, service_name)\n"
+        line = "self.cli = self.create_client(service_type, service_name)\n"
         lines.append(lineprefix + line)
         line = "while not self.cli.wait_for_service(timeout_sec=1.0):\n"
         lines.append(lineprefix + line)
@@ -1164,7 +1164,7 @@ class MonitorGenerator():
         if tinfo['remapped']:
             tpname = self.get_remapped_name(tpname)
         lineprefix = self.codegenutils.inc_indent('')
-        func_name = "callback{tname}".format(tname=tname)
+        func_name = "callback{tname}".format(tname=tname).replace('/', '_')
         func_input_varname = 'data'
         header = "def {fname}(self,{f_input}):\n".format(fname=func_name, f_input=func_input_varname)
         lines = [header]
@@ -1239,7 +1239,7 @@ class MonitorGenerator():
         if srvinfo['remapped']:
             srvname = self.get_remapped_name(srvname)
         lineprefix = self.codegenutils.inc_indent('')
-        func_name = "callback{srvname}".format(srvname=srvname)
+        func_name = "callback{srvname}".format(srvname=srvname).replace('/', '_')
         func_request = 'request'
         func_response = 'response'
         header = "def {fname}(self, {f_req}, {f_res}):\n".format(fname=func_name, f_req=func_request, f_res=func_response)
