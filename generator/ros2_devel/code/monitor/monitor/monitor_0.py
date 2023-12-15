@@ -18,10 +18,10 @@ from example_interfaces.srv import AddTwoInts
 class ROSMonitor_monitor_0(Node):
 
 
-	def callbackchatter_chatter_chatter_1(self,data):
+	def callbackchatter(self,data):
 		self.get_logger().info("monitor has observed "+ str(data))
 		dict= rosidl_runtime_py.message_to_ordereddict(data)
-		dict['topic']='chatter/chatter/chatter_1'
+		dict['topic']='chatter'
 		dict['time']=float(self.get_clock().now().to_msg().sec)
 		self.ws_lock.acquire()
 		while dict['time'] in self.dict_msgs:
@@ -33,11 +33,11 @@ class ROSMonitor_monitor_0(Node):
 		self.get_logger().info("event propagated to oracle")
 		self.on_message_topic(message)
 
-	def callbackadd_two_ints_add_two_ints_mon(self, request, response):
+	def callbackadd_two_ints_mon(self, request, response):
 		self.get_logger().info("monitor has observed a service request with "+ str(request))
 		dict = {}
 		dict['request']= rosidl_runtime_py.message_to_ordereddict(request)
-		dict['service']='add_two_ints/add_two_ints_mon'
+		dict['service']='add_two_ints_mon'
 		dict['time']=float(self.get_clock().now().to_msg().sec)
 		self.ws_lock.acquire()
 		while dict['time'] in self.dict_msgs:
@@ -95,14 +95,14 @@ class ROSMonitor_monitor_0(Node):
 		# done creating monitor publishers
 
 		self.publish_topics=False
-		self.config_client_services['add_two_ints/add_two_ints']=ServiceNode(AddTwoInts,'add_two_ints/add_two_ints')
+		self.config_client_services['add_two_ints']=ServiceNode(AddTwoInts,'add_two_ints')
 		self.config_client_services['add_two_ints_1']=ServiceNode(AddTwoInts,'add_two_ints_1')
-		self.topics_info['chatter/chatter/chatter_1']={'package': 'std_msgs.msg', 'type': 'String'}
-		self.services_info['add_two_ints/add_two_ints']={'package': 'example_interfaces.srv', 'type': 'AddTwoInts'}
+		self.topics_info['chatter']={'package': 'std_msgs.msg', 'type': 'String'}
+		self.services_info['add_two_ints']={'package': 'example_interfaces.srv', 'type': 'AddTwoInts'}
 		self.services_info['add_two_ints_1']={'package': 'example_interfaces.srv', 'type': 'AddTwoInts'}
-		self.config_subscribers['chatter/chatter/chatter_1']=self.create_subscription(topic='chatter/chatter/chatter_1',msg_type=String,callback=self.callbackchatter_chatter_chatter_1,qos_profile=1000)
+		self.config_subscribers['chatter']=self.create_subscription(topic='chatter',msg_type=String,callback=self.callbackchatter,qos_profile=1000)
 
-		self.config_server_services['add_two_ints/add_two_ints']=self.create_service(AddTwoInts, 'add_two_ints/add_two_ints_mon', self.callbackadd_two_ints_add_two_ints_mon, callback_group=MutuallyExclusiveCallbackGroup())
+		self.config_server_services['add_two_ints']=self.create_service(AddTwoInts, 'add_two_ints_mon', self.callbackadd_two_ints_mon, callback_group=MutuallyExclusiveCallbackGroup())
 
 		self.config_server_services['add_two_ints_1']=self.create_service(AddTwoInts, 'add_two_ints_1_mon', self.callbackadd_two_ints_1_mon, callback_group=MutuallyExclusiveCallbackGroup())
 
@@ -202,6 +202,9 @@ class ROSMonitor_monitor_0(Node):
 		json_dict = json.loads(message)
 		verdict = str(json_dict['verdict'])
 		service = json_dict['service'] = json_dict['service'].replace('_mon', '')
+		verdict_msg = String()
+		verdict_msg.data = verdict
+		self.monitor_publishers['verdict'].publish(verdict_msg)
 		if verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':
 			self.logging(json_dict)
 			self.get_logger().info('The response '+message+' is consistent, the result is returned')
@@ -216,9 +219,6 @@ class ROSMonitor_monitor_0(Node):
 			error.m_content = str(self.dict_msgs[json_dict['time']])
 			self.monitor_publishers['error'].publish(error)
 			error=True
-		verdict_msg = String()
-		verdict_msg.data = verdict
-		self.monitor_publishers['verdict'].publish(verdict_msg)
 		if self.actions[json_dict['service']][0] != 'filter':
 			service = json_dict['service'] = json_dict['service'].replace('_mon', '')
 			return self.dict_msgs[json_dict['time']]
@@ -238,8 +238,8 @@ def main(args=None):
 	rclpy.init(args=args)
 	log = './log.txt'
 	actions = {}
-	actions['chatter/chatter/chatter_1']=('log',0)
-	actions['add_two_ints/add_two_ints']=('filter',0)
+	actions['chatter']=('log',0)
+	actions['add_two_ints']=('filter',0)
 	actions['add_two_ints_1']=('log',0)
 	monitor = ROSMonitor_monitor_0('monitor_0',log,actions)
 	rclpy.spin(monitor)

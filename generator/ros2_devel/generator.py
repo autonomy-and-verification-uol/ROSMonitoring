@@ -733,6 +733,12 @@ class MonitorGenerator():
         lines.append(lineprefix+line)
         line = "service = {jsondict}['service'] = {jsondict}['service'].replace('_mon', '')\n".format(jsondict=jsondict)
         lines.append(lineprefix+line)
+        line = "verdict_msg = String()\n"
+        lines.append(lineprefix+line)
+        line = "verdict_msg.data = verdict\n"
+        lines.append(lineprefix+line)
+        line = "{monpubs}['verdict'].publish(verdict_msg)\n".format(monpubs=self.mon_pubs_dict_name)
+        lines.append(lineprefix+line)
         line = "if verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':\n"
         lines.append(lineprefix+line)
         
@@ -793,12 +799,6 @@ class MonitorGenerator():
         line="error=True\n"
         lines.append(lineprefix+line)   
         lineprefix = self.codegenutils.dec_indent(lineprefix)
-        line = "verdict_msg = String()\n"
-        lines.append(lineprefix+line)
-        line = "verdict_msg.data = verdict\n"
-        lines.append(lineprefix+line)
-        line = "{monpubs}['verdict'].publish(verdict_msg)\n".format(monpubs=self.mon_pubs_dict_name)
-        lines.append(lineprefix+line)
 
         line = "if {actions}[{jsond}['service']][0] != 'filter':\n".format(actions=self.actions_vname,jsond=jsondict)
         lines.append(lineprefix+line)
@@ -853,7 +853,7 @@ class MonitorGenerator():
         lines = self.codegenutils.append_lines_to_list_with_prefix(lines, v_init_lines, lineprefix)
         
         # ros init line
-        rosline = "super().__init__({monname})\n".format(monname=self.monitor_id_vname)
+        rosline = "super().__init__({monname})\n".format(monname=self.monitor_id_vname.replace('/','_'))
         lines.append(lineprefix+rosline)
         
         mon_publishers = self.create_inherent_monitor_publisher_lines()
