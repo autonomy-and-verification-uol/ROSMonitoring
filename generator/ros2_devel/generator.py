@@ -1008,7 +1008,7 @@ class MonitorGenerator():
         line = "def __init__(self, service_type, service_name):\n"
         lines.append(lineprefix + line)
         lineprefix = self.codegenutils.inc_indent(lineprefix)
-        line = "super().__init__('service_node_' + service_name)\n"
+        line = "super().__init__('service_node_' + service_name.replace('/', '_'))\n"
         lines.append(lineprefix + line)
         line = "self.cli = self.create_client(service_type, service_name)\n"
         lines.append(lineprefix + line)
