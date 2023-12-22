@@ -1,0 +1,34 @@
+path: /home/angelo/Desktop/ROS_ws/src/  # this is the path to the ros workspace you'd like the monitor package in
+# nodes: # here we list the nodes we are going to monitor
+#   - node:
+#       name: talker
+#       package: py_pubsub
+#       path: /home/parallels/dev_ws/src/py_pubsub/run.launch
+#   - node:
+#       name: listener
+#       package: py_pubsub
+#       path: /home/parallels/dev_ws/src/py_pubsub/run.launch
+ 
+monitors: # here we list the monitors we are going to generate
+  - monitor:
+      id: monitor_battery_status
+      log: ./log.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      oracle: # the oracle running and ready to check the specification (localhost in this case)
+        port: 8080 # the port where it is listening
+        url: 127.0.0.1 # the url where it is listening
+        action: nothing # the oracle will not change the message
+      topics: # the list of topics this monitor is going to intercept
+        - name: battery_status # name of the topic
+          type: sensor_msgs.msg.BatteryState # type of the topic
+          action: log
+      services:
+        - name: AlarmBatteryLowSkill/RequestAck # name of the service
+          type: bt_interfaces.srv.RequestAck # type of the service
+          action: log
+        - name: AlarmBatteryLowSkill/SendStart # name of the service
+          type: bt_interfaces.srv.SendStart # type of the service
+          action: log
+        - name: AlarmBatteryLowSkill/SendStop # name of the service
+          type: bt_interfaces.srv.SendStop # type of the service
+          action: log

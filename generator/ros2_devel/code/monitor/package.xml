@@ -13,7 +13,7 @@
   <exec_depend>rclpy</exec_depend>
   <exec_depend>rosmonitoring_interfaces</exec_depend>
 
-  <exec_depend>example_interfaces</exec_depend><exec_depend>example_interfaces</exec_depend><exec_depend>std_msgs</exec_depend><export>
+  <exec_depend>bt_interfaces</exec_depend><exec_depend>bt_interfaces</exec_depend><exec_depend>bt_interfaces</exec_depend><exec_depend>sensor_msgs</exec_depend><export>
     <build_type>ament_python</build_type>
   </export>
 </package>

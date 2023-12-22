@@ -1121,14 +1121,14 @@ class MonitorGenerator():
         ''' generate import lines for all the other message types '''
         for tp in tp_lists:
             package = tp_lists[tp]['package']
-            type = tp_lists[tp]['type']
+            # type = tp_lists[tp]['type']
             if not package in from_import:
-                from_import[package] = type
+                from_import[package] = '*'
         for srv in srv_lists:
             package = srv_lists[srv]['package']
-            type = srv_lists[srv]['type']
+            # type = srv_lists[srv]['type']
             if not package in from_import:
-                from_import[package] = type
+                from_import[package] = '*'
         
         ''' now lets generate the lines  '''
         import_lines = ["# begin imports\n"]
