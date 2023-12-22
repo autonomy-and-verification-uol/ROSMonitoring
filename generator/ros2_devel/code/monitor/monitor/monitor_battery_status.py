@@ -38,7 +38,7 @@ class ROSMonitor_monitor_battery_status(Node):
 		self.get_logger().info("monitor has observed a service request with "+ str(request))
 		dict = {}
 		dict['request']= rosidl_runtime_py.message_to_ordereddict(request)
-		dict['service']='AlarmBatteryLowSkill/RequestAck_mon'
+		dict['service']='AlarmBatteryLowSkill/RequestAck'
 		dict['time']=float(self.get_clock().now().to_msg().sec)
 		self.ws_lock.acquire()
 		while dict['time'] in self.dict_msgs:
@@ -58,7 +58,7 @@ class ROSMonitor_monitor_battery_status(Node):
 		self.get_logger().info("monitor has observed a service request with "+ str(request))
 		dict = {}
 		dict['request']= rosidl_runtime_py.message_to_ordereddict(request)
-		dict['service']='AlarmBatteryLowSkill/SendStart_mon'
+		dict['service']='AlarmBatteryLowSkill/SendStart'
 		dict['time']=float(self.get_clock().now().to_msg().sec)
 		self.ws_lock.acquire()
 		while dict['time'] in self.dict_msgs:
@@ -78,7 +78,7 @@ class ROSMonitor_monitor_battery_status(Node):
 		self.get_logger().info("monitor has observed a service request with "+ str(request))
 		dict = {}
 		dict['request']= rosidl_runtime_py.message_to_ordereddict(request)
-		dict['service']='AlarmBatteryLowSkill/SendStop_mon'
+		dict['service']='AlarmBatteryLowSkill/SendStop'
 		dict['time']=float(self.get_clock().now().to_msg().sec)
 		self.ws_lock.acquire()
 		while dict['time'] in self.dict_msgs:

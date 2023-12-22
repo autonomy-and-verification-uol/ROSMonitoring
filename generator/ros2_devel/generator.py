@@ -1259,7 +1259,7 @@ class MonitorGenerator():
         line = "{0}['request']= rosidl_runtime_py.message_to_ordereddict({1})\n".format(data_dict_name, func_request)
         lines.append(lineprefix + line)
         
-        line = "{data_dict_name}['service']='{srvname}'\n".format(data_dict_name=data_dict_name, srvname=srvname)
+        line = "{data_dict_name}['service']='{srvname}'\n".format(data_dict_name=data_dict_name, srvname=srvname.replace('_mon', ''))
         lines.append(lineprefix + line)
         
         line = "{data_dict_name}['time']={ros_time}\n".format(data_dict_name=data_dict_name, ros_time=self.codegenutils.get_ros_time_line())
