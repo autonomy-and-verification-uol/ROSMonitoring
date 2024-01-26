@@ -1,0 +1,34 @@
+
+path: /home/robotlab/ServiceExtension/test/src/
+  # this is the path to the ros workspace you'd like the monitor package in
+# nodes: # here we list the nodes we are going to monitor
+#   - node:
+#       name: talker
+#       package: py_pubsub
+#       path: /home/parallels/dev_ws/src/py_pubsub/run.launch
+#   - node:
+#       name: listener
+#       package: py_pubsub
+#       path: /home/parallels/dev_ws/src/py_pubsub/run.launch
+
+monitors: # here we list the monitors we are going to generate
+  - monitor:
+      id: monitor_0
+      log: ./log.txt # file where the monitor will log the observed events
+      silent: False # we let the monitor to print info during its execution
+      oracle: # the oracle running and ready to check the specification (localhost in this case)
+        port: 8080 # the port where it is listening
+        url: 127.0.0.1 # the url where it is listening
+        action: nothing # the oracle will not change the message
+      topics: # the list of topics this monitor is going to intercept
+        - name: chatter # name of the topic
+          type: std_msgs.msg.String # type of the topic
+          action: log
+      services:
+        - name: add_two_ints # name of the service
+          type: service_eg.srv.AddTwoInts # type of the service
+          action: filter
+        - name: add_two_ints_1 # name of the service
+          type: service_eg.srv.AddTwoInts # type of the service
+          action: log
+      

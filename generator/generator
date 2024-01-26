@@ -109,9 +109,11 @@ def main(argv):
                         warning = monitor['monitor']['warning']
                     else:
                         warning = 0
-                    create_monitor(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['log'], url, port, oracle_action, silent, warning)
-                create_launch_file(ids)
-                instrument_launch_files(nodes)
+                    
+                mg = MonitorGenerator(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['services'], monitor['monitor']['log'], url, port, oracle_action, silent, warning, ids, nodes)
+                mg.write_monitor()
+                mg.write_launch_file()
+                mg.instrument_launch_files()
         except yaml.YAMLError as exc:
             print(exc)
 
