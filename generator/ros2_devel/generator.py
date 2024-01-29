@@ -978,10 +978,11 @@ class MonitorGenerator():
             on_message_lines = self.create_on_message_topic(silent, oracle_action, tp_lists)
             lines=self.codegenutils.append_lines_to_list_with_prefix(lines,on_message_lines,lineprefix)
 
-        on_message_lines = self.create_on_message_service_request(silent, oracle_action, srv_lists, oracle_url != None and oracle_port != None)
-        lines=self.codegenutils.append_lines_to_list_with_prefix(lines,on_message_lines,lineprefix)
-        on_message_lines = self.create_on_message_service_response(silent, oracle_action, srv_lists, oracle_url != None and oracle_port != None)
-        lines=self.codegenutils.append_lines_to_list_with_prefix(lines,on_message_lines,lineprefix)
+        if srv_lists:
+            on_message_lines = self.create_on_message_service_request(silent, oracle_action, srv_lists, oracle_url != None and oracle_port != None)
+            lines=self.codegenutils.append_lines_to_list_with_prefix(lines,on_message_lines,lineprefix)
+            on_message_lines = self.create_on_message_service_response(silent, oracle_action, srv_lists, oracle_url != None and oracle_port != None)
+            lines=self.codegenutils.append_lines_to_list_with_prefix(lines,on_message_lines,lineprefix)
             
         lines.append(new_line)
         
@@ -1375,7 +1376,8 @@ class MonitorGenerator():
         monloc = 'code/monitor/monitor/'
         packageloc = 'code/monitor/'
         lines = self.create_mon_file_lines(topics_with_types_and_action, services_with_types_and_action, monitor_id, silent, oracle_action, url, port, log)
-        lines.extend(self.create_service_node())
+        if services_with_types_and_action:
+            lines.extend(self.create_service_node())
         tp_lists = self.get_topic_and_service_msg_types(topics_with_types_and_action)
         tp_lists.update(self.get_topic_and_service_msg_types(services_with_types_and_action))
         self.codegenutils.write_lines(lines, monitor_id, monloc)
