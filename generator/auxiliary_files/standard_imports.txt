@@ -8,5 +8,3 @@ from threading import *
 from rospy_message_converter import message_converter
 from monitor.msg import *
 from std_msgs.msg import String
-
-ws_lock = Lock()

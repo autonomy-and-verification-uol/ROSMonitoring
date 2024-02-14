@@ -1,0 +1,7 @@
+def on_message_topic(message):
+	global error, log, actions
+	json_dict = json.loads(message)
+	verdict = json_dict['verdict']
+	topic = json_dict['topic']
+	msg = dict_msgs[json_dict['time']]
+
