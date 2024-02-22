@@ -3,7 +3,7 @@ def call_service(service, msgType, json_dict):
 	rospy.wait_for_service(service)		
 	add_two_ints = rospy.ServiceProxy(service, msgType)
 	response = add_two_ints(dict_msgs[json_dict['time']])	
-	rospy.loginfo('The service has been called.')
+	rospy.loginfo('The service '+str(service)+' has been called.')
 	json_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)
 	dict_msgs[json_dict['time']] = response
 

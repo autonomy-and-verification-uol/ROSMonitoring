@@ -69,6 +69,7 @@ class MonitorGenerator():
 		inits = '\n\nws_lock = Lock()'
 		if self.oracle_action == 'nothing':
 		    inits += '''\ndict_msgs = {}'''
+		inits += '''\nsrv_type_dict = dict()'''
 		return inits
 		
 	def get_imports_for_service_msg_types(self):	
@@ -91,12 +92,12 @@ class MonitorGenerator():
 			
 			srv_name = service_with_types_and_action['name']
 			srv_type = service_with_types_and_action['type']
-			callbacks += '''\ndef callback_{srv}(request, response):\n\tglobal ws, ws_lock'''.format(srv = srv_name+'_mon'.replace('/','_'))
+			callbacks += '''\ndef callback_{srv}(request):\n\tglobal ws, ws_lock'''.format(srv = srv_name+'_mon'.replace('/','_'))
 			callbacks += '\n\td = dict()'
 			if not self.silent:
 				callbacks += '''\n\trospy.loginfo('monitor has observed: ' + str(request))'''
 				
-				callbacks += '''\n\td['request'] = message_converter.convert_ros_message_to_dictionary(request)\n\td['service'] = '{srv}'\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''.format(srv = srv_name+'_mon'.replace('/','_'))
+			callbacks += '''\n\td['request'] = message_converter.convert_ros_message_to_dictionary(request)\n\td['service'] = '{srv}'\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''.format(srv = srv_name.replace('/','_'))
 			if self.oracle_action == 'nothing':
 				callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
 			if self.url != None and self.port != None:
@@ -171,7 +172,8 @@ class MonitorGenerator():
         				else:
         					pub_dict += ', '
         				tp_name = topic_with_types_and_action['name']
-        				pub_dict += ''' '{tp1}' : pub{tp2}'''.format(tp1 = tp_name, tp2 = tp_name.replace('/','_'))
+        				publishers = [p.replace('/','_') for p in topic_with_types_and_action['publishers']]
+        				pub_dict += ''' '{tp1}' : {ps}'''.format(tp1 = tp_name, ps = publishers)
         		pub_dict += '''}'''
         
         		return pub_dict
@@ -231,6 +233,7 @@ class MonitorGenerator():
         			srv_name = service_with_types_and_action['name']
         			srv_type = service_with_types_and_action['type']
         			srv_side = srv_name + '_mon'
+        			monitor_def += '''\n\tsrv_type_dict['{srv}'] = {typ}'''.format(srv = srv_name, typ = srv_type[srv_type.rfind('.')+1:])
 
         			monitor_def += '''\n\trospy.Service('{srvs}', {ty}, callback_{srv})'''.format(srv = srv_side.replace('/','_'), srvs = srv_side, ty = srv_type[srv_type.rfind('.')+1:])
         			        		
@@ -251,10 +254,10 @@ class MonitorGenerator():
         		if not self.silent:
         			on_msg_topic += '''\n\t\t\trospy.loginfo('The event ' + message + ' is consistent and republished')'''
         		if self.oracle_action == 'nothing':
-        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(msg)\n\t\t\tdel dict_msgs[json_dict['time']]'''
+        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic][0].publish(msg)\n\t\t\tdel dict_msgs[json_dict['time']]'''
         		else:
         			on_msg_topic += '''\n\t\t\tdel json_dict['topic']\n\t\t\tdel json_dict['time']\n\t\t\tROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)'''
-        			on_msg_topic += '''\n\t\t\t if topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
+        			on_msg_topic += '''\n\t\t\t if topic in pub_dict:\n\t\t\t\tpub_dict[topic][0].publish(ROS_message)'''
         		on_msg_topic += '''\n\telse:\n\t\tlogging(json_dict)'''
 
         		if not self.silent:
@@ -268,13 +271,13 @@ class MonitorGenerator():
         		on_msg_topic +='''\n\t\tif actions[topic][0] != 'filter':'''
         			
         		if self.oracle_action == 'nothing':
-        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(msg)'''
+        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic][0].publish(msg)'''
         			on_msg_topic += '''\n\t\t\tdel dict_msgs[json_dict['time']]'''
         		else:
         			on_msg_topic += '''\n\t\t\tdel json_dict['topic']\n\t\t\tdel json_dict['time']'''
         			on_msg_topic +='''\n\t\t\tdel json_dict['error']\n\t\t\tdel json_dict['spec']'''
         			on_msg_topic +='''\n\t\t\tROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)'''
-        			on_msg_topic +='''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
+        			on_msg_topic +='''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic][0].publish(ROS_message)'''
         		on_msg_topic += '''\n\tpublish_verdict(verdict)'''
        	
 
@@ -289,9 +292,11 @@ class MonitorGenerator():
         		on_msg_request+= '''\n\t\tlogging(json_dict)'''
         		
         		if not self.silent:
-        			on_msg_request += '''\n\t\trospy.loginfo('The event ' + message + ' is consistent and the service is called.')'''
+        			on_msg_request += '''\n\t\trospy.loginfo('The event ' + message + ' is consistent and the service', str(service), 'is called.')'''
         		on_msg_request +='''\n\t\tdel json_dict['verdict']'''
-        		on_msg_request +='''\n\t\tcall_service(service, json_dict['type'], json_dict)'''
+        		###########################################
+        		
+        		on_msg_request +='''\n\t\tcall_service(service, srv_type_dict[service], json_dict)'''
         		on_msg_request +='''\n\t\tdel json_dict['request']'''
         		on_msg_request +='''\n\t\tmsg = get_oracle_verdict(json_dict)\n\t\treturn on_message_service_response(msg)'''
         		on_msg_request +='''\n\telse:\n\t\tlogging(json_dict)'''
@@ -304,7 +309,7 @@ class MonitorGenerator():
         		
         		on_msg_request +='''\n\t\tif actions[service][0] != 'filter':'''
         		on_msg_request +='''\n\t\t\tif 'verdict' in json_dict: del json_dict['verdict']'''
-        		on_msg_request +='''\n\t\t\tcall_service(service, json_dict['type'], json_dict)'''
+        		on_msg_request +='''\n\t\t\tcall_service(service, srv_type_dict[service], json_dict)'''
         		on_msg_request +='''\n\t\t\tdel json_dict['request']'''
         		on_msg_request +='''\n\t\t\tmsg = get_oracle_verdict(json_dict)\n\t\t\treturn on_message_service_response(msg)'''
         		on_msg_request +='''\n\t\telse:\n\t\t\traise Exception('The request violates the monitor specification, so it has been filtered out.')'''	
