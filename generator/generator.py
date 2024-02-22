@@ -69,6 +69,7 @@ class MonitorGenerator():
 		inits = '\n\nws_lock = Lock()'
 		if self.oracle_action == 'nothing':
 		    inits += '''\ndict_msgs = {}'''
+		inits += '''\npub_dict = {}'''
 		inits += '''\nsrv_type_dict = dict()'''
 		return inits
 		
@@ -83,7 +84,7 @@ class MonitorGenerator():
 			msg_type = srv_type[i+1:]
 			msg_import_set.update([(package, msg_type)])
 		for (package, msg_type) in msg_import_set:
-            		msg_type_imports += '''\nfrom {p} import {t}'''.format(p = package, t = msg_type)
+            		msg_type_imports += '''\nfrom {p} import {t}, {t}Response'''.format(p = package, t = msg_type)
 		return msg_type_imports
 
 	def get_callback_per_service(self):
@@ -108,7 +109,8 @@ class MonitorGenerator():
 				callbacks += '''\n\tws_lock.release()\n'''
 				if not self.silent:
 					callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
-				callbacks += '''\n\treturn on_message_service_request(msg)\n'''
+				
+				callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept error:\n\t\tres = {t}Response()\n\t\tres.error = True\n\t\treturn res\n'''.format(t = srv_type[srv_type.rfind('.')+1:])
 
 			else:
 				callbacks += '''\n\tlogging(d)'''
@@ -159,24 +161,7 @@ class MonitorGenerator():
             		
             		
 		return pub_with_callbacks
-       
-	def get_dict_for_publishers(self):
-        		# write the dictionary for dynamically keeping track of the publishers
-        		pub_dict = '''\npub_dict = {'''
-        		first_time = True
-        		for topic_with_types_and_action in self.topics_with_types_and_action:
-        		#for (topic, (type, _), _, _, _, _, _) in topics_with_types:
-        			if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
-        				if(first_time):
-        					first_time = False
-        				else:
-        					pub_dict += ', '
-        				tp_name = topic_with_types_and_action['name']
-        				publishers = [p.replace('/','_') for p in topic_with_types_and_action['publishers']]
-        				pub_dict += ''' '{tp1}' : {ps}'''.format(tp1 = tp_name, ps = publishers)
-        		pub_dict += '''}'''
-        
-        		return pub_dict
+      
 
 	def get_dict_for_msg_types(self):
         		# write the dictionary for dynamically keeping track of the message types (we need it for the message converter)
@@ -194,23 +179,6 @@ class MonitorGenerator():
         			msg_dict += ''' '{tp}' : "{ty}"'''.format(tp = tp_name, ty = tp_type[0:i].replace('.msg', '') + '/' + tp_type[i+1:])
         		msg_dict += '''}'''
         		return msg_dict
-
-#	def get_dict_for_service_types(self):
-#        		# write the dictionary for dynamically keeping track of the message types (we need it for the message converter)
-#        		msg_dict = '''\nsrv_dict = {'''
-#        		first_time = True
-#        		for service_with_types_and_action in self.services_with_types_and_action:
-#        		#for (topic, (type, imp), _, _, _, _, _) in topics_with_types:
-#        			if(first_time):
-#        				first_time = False
-#        			else:
-#        				msg_dict += ', '
-#        			srv_name = service_with_types_and_action['name']
-#        			srv_type = service_with_types_and_action['type']
-#        			i = srv_type.rfind('.')
-#        			msg_dict += ''' '{srv}' : "{ty}"'''.format(srv = srv_name, ty = srv_type[0:i].replace('.msg', '') + '/' + srv_type[i+1:])
-#        		msg_dict += '''}'''
-#        		return msg_dict
         		
 	def get_mon_node(self):
         		# write the definition of the monitor function which will be used to initialize the rosnode, and create the Subscribers for all the instrumented topics.
@@ -219,7 +187,18 @@ class MonitorGenerator():
         		f = open(os.path.join(self.input_path, 'monitor_function.txt'), 'r')
         		monitor_def = '\n'+f.read().replace('$ID$', self.monitor_id)+'\n'
         		f.close()
-        
+        		for topic_with_types_and_action in self.topics_with_types_and_action:
+        			if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
+        				tp_name = topic_with_types_and_action['name'] 
+        				tp_side = tp_name
+        				if 'subscribers' in topic_with_types_and_action:
+        					tp_side = tp_name + '_mon'
+        			
+        				tp_type = topic_with_types_and_action['type']
+        				
+        				monitor_def += '''\n\tpub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = tp_name.replace('/','_'), tps = tp_side, ty = tp_type[tp_type.rfind('.')+1:])
+        				monitor_def += '''\n\tpub_dict['{tp}'] = pub{tp}\n'''.format(tp = tp_name)
+                        
         		for topic_with_types_and_action in self.topics_with_types_and_action:
         			tp_name = topic_with_types_and_action['name']
         			tp_type = topic_with_types_and_action['type']
@@ -254,10 +233,10 @@ class MonitorGenerator():
         		if not self.silent:
         			on_msg_topic += '''\n\t\t\trospy.loginfo('The event ' + message + ' is consistent and republished')'''
         		if self.oracle_action == 'nothing':
-        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic][0].publish(msg)\n\t\t\tdel dict_msgs[json_dict['time']]'''
+        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(msg)\n\t\t\tdel dict_msgs[json_dict['time']]'''
         		else:
         			on_msg_topic += '''\n\t\t\tdel json_dict['topic']\n\t\t\tdel json_dict['time']\n\t\t\tROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)'''
-        			on_msg_topic += '''\n\t\t\t if topic in pub_dict:\n\t\t\t\tpub_dict[topic][0].publish(ROS_message)'''
+        			on_msg_topic += '''\n\t\t\t if topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
         		on_msg_topic += '''\n\telse:\n\t\tlogging(json_dict)'''
 
         		if not self.silent:
@@ -271,13 +250,13 @@ class MonitorGenerator():
         		on_msg_topic +='''\n\t\tif actions[topic][0] != 'filter':'''
         			
         		if self.oracle_action == 'nothing':
-        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic][0].publish(msg)'''
+        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(msg)'''
         			on_msg_topic += '''\n\t\t\tdel dict_msgs[json_dict['time']]'''
         		else:
         			on_msg_topic += '''\n\t\t\tdel json_dict['topic']\n\t\t\tdel json_dict['time']'''
         			on_msg_topic +='''\n\t\t\tdel json_dict['error']\n\t\t\tdel json_dict['spec']'''
         			on_msg_topic +='''\n\t\t\tROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)'''
-        			on_msg_topic +='''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic][0].publish(ROS_message)'''
+        			on_msg_topic +='''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
         		on_msg_topic += '''\n\tpublish_verdict(verdict)'''
        	
 
@@ -386,7 +365,7 @@ class MonitorGenerator():
         	with open(self.monitor_file, 'w') as monitor: # the monitor code will be in monitor.py
         		if self.url != None and self.port != None:
         			# + self.get_dict_for_service_types()
-        			monitor.write(self.get_standard_imports() + self.get_imports_for_topic_msg_types() + self.get_imports_for_service_msg_types() + self.get_initialisations() + self.get_dict_for_publishers() + self.get_dict_for_msg_types() + self.get_callback_per_service() + self.get_publisher_per_topic() + self.get_mon_node() + self.get_on_message_topic() + self.get_on_message_service_request() + self.get_on_message_service_response() + self.get_functions() + self.get_logging_function() + self.get_main_function())
+        			monitor.write(self.get_standard_imports() + self.get_imports_for_topic_msg_types() + self.get_imports_for_service_msg_types() + self.get_initialisations() + self.get_dict_for_msg_types() + self.get_callback_per_service() + self.get_publisher_per_topic() + self.get_mon_node() + self.get_on_message_topic() + self.get_on_message_service_request() + self.get_on_message_service_response() + self.get_functions() + self.get_logging_function() + self.get_main_function())
 
 	def write_launch_file(self):
 		with open(self.launch_file, 'w') as launch_file:
