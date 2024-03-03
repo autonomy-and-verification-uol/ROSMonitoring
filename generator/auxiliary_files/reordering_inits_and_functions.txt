@@ -1,0 +1,21 @@
+
+topics_to_reorder = []
+
+buffers = {topic:[] for topic in topics_to_reorder} #topic mapped to time stamp of **publication**
+msgs_dict = dict() #time stamp of msg **publication** mapped to msg (data processed into a dictionary) 
+data_dict = dict() #time stamp of msg **publication** mapped to raw data
+
+def getTime(d): #given the message in form of a dictionary, calculates time in nanoseconds
+	return pow(10,9) * d['stamp']['secs'] + d['stamp']['nsecs']
+	
+def addToBuffer(topic, d, data): #called by callback functions for all topics, buffers msgs and calls sendEarliestMsgToOracle only when every topic has a msg in its buffer
+	global buffers, msgs_dict, data_dict
+	time_nsecs = getTime(d)	
+	buffers[topic].append(time_nsecs) 
+	msgs_dict[time_nsecs] = d
+	data_dict[time_nsecs] = data
+	non_empty_buffers = [top for top in topics_to_reorder if buffers[top] != []]
+	while len(non_empty_buffers) == len(topics):		
+		sendEarliestMsgToOracle() 		
+		non_empty_buffers = [top for top in topics_to_reorder if buffers[top] != []]	
+

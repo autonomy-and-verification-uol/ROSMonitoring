@@ -27,7 +27,7 @@ import xml.etree.ElementTree as ET
 
 class MonitorGenerator():
 
-	def __init__(self, monitor_id, topics_with_types_and_action, services_with_types_and_action, log, url, port, oracle_action, silent, warning, ids, nodes):
+	def __init__(self, monitor_id, topics_with_types_and_action, services_with_types_and_action, ordered_topics, log, url, port, oracle_action, silent, warning, ids, nodes):
 		self.input_path = './auxiliary_files/'
 		self.monitor_file = '../monitor/src/' + monitor_id + '.py'
 		self.launch_file = '../monitor/run.launch'
@@ -35,6 +35,7 @@ class MonitorGenerator():
 		self.topics_with_types_and_action = topics_with_types_and_action
 		#added:
 		self.services_with_types_and_action = services_with_types_and_action
+		self.ordered_topics = ordered_topics
 		self.log = log
 		self.url = url
 		self.port = port
@@ -44,9 +45,8 @@ class MonitorGenerator():
 		self.monitor_ids = ids
 		self.nodes = nodes
 		
-		
 	def get_standard_imports(self):
-		# get the imports the monitor is gonna need
+		# get the imports the monitor will need
 		f = open(os.path.join(self.input_path, 'standard_imports.txt'), 'r')
 		std_imports = f.read()
 		f.close()
@@ -72,6 +72,12 @@ class MonitorGenerator():
 		inits += '''\npub_dict = {}'''
 		inits += '''\nsrv_type_dict = dict()'''
 		return inits
+		
+	def get_reordering_inits_and_functions(self):
+		f = open(os.path.join(self.input_path, 'reordering_inits_and_functions.txt'), 'r')
+		reordering_inits_and_functions = f.read()
+		f.close()
+		return reordering_inits_and_functions
 		
 	def get_imports_for_service_msg_types(self):	
         		# get the imports for the msg types used by the monitor (extracted by the previous instrumentation)
@@ -119,7 +125,41 @@ class MonitorGenerator():
 					callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
 
 		return callbacks
-		            	
+	
+	def get_customised_send_earliest_msg_to_oracle_function(self):
+		pub_with_callbacks = '''\ndef sendEarliestMsgToOracle():\n\tglobal ws, ws_lock\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
+
+		pub_with_callbacks += '''\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''
+		if self.oracle_action == 'nothing':
+                		pub_with_callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
+            		
+		if self.url != None and self.port != None:
+                		pub_with_callbacks += '''\n\tws.send(json.dumps(d))'''
+                		if self.oracle_action == 'nothing':
+                			pub_with_callbacks += '''\n\tdict_msgs[d['time']] = data_dict[min_time]'''
+
+                		pub_with_callbacks += '\n\tmsg = ws.recv()'
+                		pub_with_callbacks += '''\n\tws_lock.release()\n'''
+                		
+                		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)\n'''
+                		
+                		pub_with_callbacks += '''\n\treturn on_message_topic(msg)\n'''
+
+		else:
+            		pub_with_callbacks += '''\n\tlogging(d)'''
+            		pub_with_callbacks += '''\n\tws_lock.release()\n'''
+            		
+            		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)\n'''
+            		
+            		if not self.silent:
+                			pub_with_callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
+            		if not self.silent:
+            			pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')'''
+            		#if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
+            		pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
+            		
+		return pub_with_callbacks
+	           	
 	def get_publisher_per_topic(self):
     		# write the creation of the publisher for each topic (and the callback function for the instrumented one)
 		pub_with_callbacks = '\n'
@@ -135,29 +175,33 @@ class MonitorGenerator():
 
 			if not self.silent:
             			pub_with_callbacks += '''\n\trospy.loginfo('monitor has observed: ' + str(data))'''
-			pub_with_callbacks += '''\n\td = message_converter.convert_ros_message_to_dictionary(data)\n\td['topic'] = '{tp}'\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''.format(tp = tp_name)
-			if self.oracle_action == 'nothing':
-                			pub_with_callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
-            		
-			if self.url != None and self.port != None:
-                			pub_with_callbacks += '''\n\tws.send(json.dumps(d))'''
-                			if self.oracle_action == 'nothing':
-                				pub_with_callbacks += '''\n\tdict_msgs[d['time']] = data'''
-                				                		
-######
-                			pub_with_callbacks += '\n\tmsg = ws.recv()'
-                			pub_with_callbacks += '''\n\tws_lock.release()\n'''
-                			pub_with_callbacks += '''\n\treturn on_message_topic(msg)\n'''
-
+			pub_with_callbacks += '''\n\td = message_converter.convert_ros_message_to_dictionary(data)\n\td['topic'] = '{tp}' '''.format(tp = tp_name)
+			
+			if tp_name in self.ordered_topics:
+				pub_with_callbacks += '''\n\taddToBuffer(d['topic'], d, data)'''
 			else:
-            			pub_with_callbacks += '''\n\tlogging(d)'''
-            			pub_with_callbacks += '''\n\tws_lock.release()\n'''
-            			if not self.silent:
-                				pub_with_callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
-            			if not self.silent:
-            				pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')'''
-            			if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
-            				pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
+				pub_with_callbacks += '''\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''
+				if self.oracle_action == 'nothing':
+                				pub_with_callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
+            		
+				if self.url != None and self.port != None:
+                				pub_with_callbacks += '''\n\tws.send(json.dumps(d))'''
+                				if self.oracle_action == 'nothing':
+                					pub_with_callbacks += '''\n\tdict_msgs[d['time']] = data'''
+
+                				pub_with_callbacks += '\n\tmsg = ws.recv()'
+                				pub_with_callbacks += '''\n\tws_lock.release()\n'''
+                				pub_with_callbacks += '''\n\treturn on_message_topic(msg)\n'''
+
+				else:
+            				pub_with_callbacks += '''\n\tlogging(d)'''
+            				pub_with_callbacks += '''\n\tws_lock.release()\n'''
+            				if not self.silent:
+                					pub_with_callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
+            				if not self.silent:
+            					pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')'''
+            				if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
+            					pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
             		
             		
 		return pub_with_callbacks
@@ -273,7 +317,6 @@ class MonitorGenerator():
         		if not self.silent:
         			on_msg_request += '''\n\t\trospy.loginfo('The event ' + message + ' is consistent and the service', str(service), 'is called.')'''
         		on_msg_request +='''\n\t\tdel json_dict['verdict']'''
-        		###########################################
         		
         		on_msg_request +='''\n\t\tcall_service(service, srv_type_dict[service], json_dict)'''
         		on_msg_request +='''\n\t\tdel json_dict['request']'''
@@ -365,7 +408,7 @@ class MonitorGenerator():
         	with open(self.monitor_file, 'w') as monitor: # the monitor code will be in monitor.py
         		if self.url != None and self.port != None:
         			# + self.get_dict_for_service_types()
-        			monitor.write(self.get_standard_imports() + self.get_imports_for_topic_msg_types() + self.get_imports_for_service_msg_types() + self.get_initialisations() + self.get_dict_for_msg_types() + self.get_callback_per_service() + self.get_publisher_per_topic() + self.get_mon_node() + self.get_on_message_topic() + self.get_on_message_service_request() + self.get_on_message_service_response() + self.get_functions() + self.get_logging_function() + self.get_main_function())
+        			monitor.write(self.get_standard_imports() + self.get_imports_for_topic_msg_types() + self.get_imports_for_service_msg_types() + self.get_initialisations() +  self.get_dict_for_msg_types() + self.get_reordering_inits_and_functions() + self.get_customised_send_earliest_msg_to_oracle_function() + self.get_publisher_per_topic() + self.get_callback_per_service() + self.get_mon_node() + self.get_on_message_topic() + self.get_on_message_service_request() + self.get_on_message_service_response() + self.get_functions() + self.get_logging_function() + self.get_main_function())
 
 	def write_launch_file(self):
 		with open(self.launch_file, 'w') as launch_file:
