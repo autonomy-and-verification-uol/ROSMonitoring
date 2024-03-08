@@ -74,8 +74,9 @@ class MonitorGenerator():
 		return inits
 		
 	def get_reordering_inits_and_functions(self):
+		reordering_inits_and_functions = '\n\ntopics_to_reorder = ["'+'", "'.join(self.ordered_topics)+'"]' 
 		f = open(os.path.join(self.input_path, 'reordering_inits_and_functions.txt'), 'r')
-		reordering_inits_and_functions = f.read()
+		reordering_inits_and_functions += f.read()
 		f.close()
 		return reordering_inits_and_functions
 		
