@@ -122,13 +122,13 @@ class MonitorGenerator():
 			else:
 				callbacks += '''\n\tlogging(d)'''
 				callbacks += '''\n\tws_lock.release()'''
-				if not self.silent:
-					callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
+				#if not self.silent:
+				#	callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
 
 		return callbacks
 	
 	def get_customised_send_earliest_msg_to_oracle_function(self):
-		pub_with_callbacks = '''\ndef sendEarliestMsgToOracle():\n\tglobal ws, ws_lock\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
+		pub_with_callbacks = '''\ndef logEarliestMsg():\n\tglobal ws, ws_lock, data_dict, msgs_dict\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
 
 		pub_with_callbacks += '''\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''
 		if self.oracle_action == 'nothing':
@@ -150,14 +150,12 @@ class MonitorGenerator():
             		pub_with_callbacks += '''\n\tlogging(d)'''
             		pub_with_callbacks += '''\n\tws_lock.release()\n'''
             		
-            		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)\n'''
+            		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tif min_time in msgs_dict.keys():\n\t\tmsgs_dict.pop(min_time)\n\tif min_time in data_dict.keys():\n\t\tdata_dict.pop(min_time)\n'''
             		
-            		if not self.silent:
-                			pub_with_callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
-            		if not self.silent:
-            			pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')'''
+            		#if not self.silent:
+                		#	pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')'''
             		#if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
-            		pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
+            		#	pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
             		
 		return pub_with_callbacks
 	           	
@@ -173,13 +171,13 @@ class MonitorGenerator():
 					tp_side += '_mon'
 
 			pub_with_callbacks += '''\ndef callback_{tp}(data):\n\tglobal ws, ws_lock'''.format(tp = tp_name.replace('/','_'))
-
+			pub_with_callbacks += '''\n\td['topic'] = '{tp}' '''.format(tp = tp_name)
 			if not self.silent:
-            			pub_with_callbacks += '''\n\trospy.loginfo('monitor has observed: ' + str(data))'''
-			pub_with_callbacks += '''\n\td = message_converter.convert_ros_message_to_dictionary(data)\n\td['topic'] = '{tp}' '''.format(tp = tp_name)
+            			pub_with_callbacks += '''\n\trospy.loginfo('monitor has observed the following message on topic '+d['topic']+': ' + str(data))'''
+			pub_with_callbacks += '''\n\td = message_converter.convert_ros_message_to_dictionary(data)'''
 			
 			if tp_name in self.ordered_topics:
-				pub_with_callbacks += '''\n\taddToBuffer(d['topic'], d, data)'''
+				pub_with_callbacks += '''\n\taddToBuffer(d['topic'], d, data)\n'''
 			else:
 				pub_with_callbacks += '''\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''
 				if self.oracle_action == 'nothing':
@@ -197,12 +195,10 @@ class MonitorGenerator():
 				else:
             				pub_with_callbacks += '''\n\tlogging(d)'''
             				pub_with_callbacks += '''\n\tws_lock.release()\n'''
-            				if not self.silent:
-                					pub_with_callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
-            				if not self.silent:
-            					pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')'''
-            				if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
-            					pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
+            				#if not self.silent:       #logging function takes care of this  
+                				#	pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
+            				#if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
+            				#	pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
             		
             		
 		return pub_with_callbacks
@@ -281,7 +277,7 @@ class MonitorGenerator():
         			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(msg)\n\t\t\tdel dict_msgs[json_dict['time']]'''
         		else:
         			on_msg_topic += '''\n\t\t\tdel json_dict['topic']\n\t\t\tdel json_dict['time']\n\t\t\tROS_message = message_converter.convert_dictionary_to_ros_message(msg_dict[topic], json_dict)'''
-        			on_msg_topic += '''\n\t\t\t if topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
+        			on_msg_topic += '''\n\t\t\tif topic in pub_dict:\n\t\t\t\tpub_dict[topic].publish(ROS_message)'''
         		on_msg_topic += '''\n\telse:\n\t\tlogging(json_dict)'''
 
         		if not self.silent:
@@ -407,9 +403,9 @@ class MonitorGenerator():
 	def write_monitor(self):
         	# function which creates the python ROS monitor
         	with open(self.monitor_file, 'w') as monitor: # the monitor code will be in monitor.py
-        		if self.url != None and self.port != None:
+        		#if self.url != None and self.port != None:
         			# + self.get_dict_for_service_types()
-        			monitor.write(self.get_standard_imports() + self.get_imports_for_topic_msg_types() + self.get_imports_for_service_msg_types() + self.get_initialisations() +  self.get_dict_for_msg_types() + self.get_reordering_inits_and_functions() + self.get_customised_send_earliest_msg_to_oracle_function() + self.get_publisher_per_topic() + self.get_callback_per_service() + self.get_mon_node() + self.get_on_message_topic() + self.get_on_message_service_request() + self.get_on_message_service_response() + self.get_functions() + self.get_logging_function() + self.get_main_function())
+        		monitor.write(self.get_standard_imports() + self.get_imports_for_topic_msg_types() + self.get_imports_for_service_msg_types() + self.get_initialisations() +  self.get_dict_for_msg_types() + self.get_reordering_inits_and_functions() + self.get_customised_send_earliest_msg_to_oracle_function() + self.get_publisher_per_topic() + self.get_callback_per_service() + self.get_mon_node() + self.get_on_message_topic() + self.get_on_message_service_request() + self.get_on_message_service_response() + self.get_functions() + self.get_logging_function() + self.get_main_function())
 
 	def write_launch_file(self):
 		with open(self.launch_file, 'w') as launch_file:
