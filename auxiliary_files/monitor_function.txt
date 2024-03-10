@@ -1,8 +1,0 @@
-
-def monitor():
-	global pub_error, pub_verdict
-	with open(log, 'w') as log_file:
-		log_file.write('')
-	rospy.init_node('$ID$', anonymous=True)
-	pub_error = rospy.Publisher(name = '$ID$/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
-	pub_verdict = rospy.Publisher(name = '$ID$/monitor_verdict', data_class = String, latch = True, queue_size = 1000)
