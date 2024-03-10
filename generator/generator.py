@@ -44,6 +44,7 @@ class MonitorGenerator():
 		self.warning = warning
 		self.monitor_ids = ids
 		self.nodes = nodes
+		self.topics_to_republish = [topic_with_types_and_action['name'] for topic_with_types_and_action in self.topics_with_types_and_action if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action]
 		
 	def get_standard_imports(self):
 		# get the imports the monitor will need
@@ -71,10 +72,18 @@ class MonitorGenerator():
 		    inits += '''\ndict_msgs = {}'''
 		inits += '''\npub_dict = {}'''
 		inits += '''\nsrv_type_dict = dict()'''
+		tps_to_republish = ''
+		if self.topics_to_republish:
+			tps_to_republish = '"'+'", "'.join(self.topics_to_republish)+'"'
+		inits += '\ntopics_to_republish = ['+tps_to_republish+']'
+		
 		return inits
 		
 	def get_reordering_inits_and_functions(self):
-		reordering_inits_and_functions = '\n\ntopics_to_reorder = ["'+'", "'.join(self.ordered_topics)+'"]' 
+		topics_to_reorder = ''
+		if self.ordered_topics:
+			 topics_to_reorder = '"'+'", "'.join(self.ordered_topics)+'"'
+		reordering_inits_and_functions = '\n\ntopics_to_reorder = ['+topics_to_reorder+']' 
 		f = open(os.path.join(self.input_path, 'reordering_inits_and_functions.txt'), 'r')
 		reordering_inits_and_functions += f.read()
 		f.close()
@@ -122,15 +131,15 @@ class MonitorGenerator():
 			else:
 				callbacks += '''\n\tlogging(d)'''
 				callbacks += '''\n\tws_lock.release()'''
-				#if not self.silent:
+				#if not self.silent:  #logging function takes care of this 
 				#	callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
 
 		return callbacks
 	
 	def get_customised_send_earliest_msg_to_oracle_function(self):
-		pub_with_callbacks = '''\ndef logEarliestMsg():\n\tglobal ws, ws_lock, data_dict, msgs_dict\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
+		pub_with_callbacks = '''\ndef logEarliestMsg():\n\tglobal data_dict, msgs_dict\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
 
-		pub_with_callbacks += '''\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''
+		pub_with_callbacks += '''\n\td['time'] = rospy.get_time()'''
 		if self.oracle_action == 'nothing':
                 		pub_with_callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
             		
@@ -140,7 +149,6 @@ class MonitorGenerator():
                 			pub_with_callbacks += '''\n\tdict_msgs[d['time']] = data_dict[min_time]'''
 
                 		pub_with_callbacks += '\n\tmsg = ws.recv()'
-                		pub_with_callbacks += '''\n\tws_lock.release()\n'''
                 		
                 		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)\n'''
                 		
@@ -148,11 +156,14 @@ class MonitorGenerator():
 
 		else:
             		pub_with_callbacks += '''\n\tlogging(d)'''
-            		pub_with_callbacks += '''\n\tws_lock.release()\n'''
             		
-            		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tif min_time in msgs_dict.keys():\n\t\tmsgs_dict.pop(min_time)\n\tif min_time in data_dict.keys():\n\t\tdata_dict.pop(min_time)\n'''
-            		
-            		#if not self.silent:
+            		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)'''
+            		if self.topics_to_republish:
+            			pub_with_callbacks += '''\n\tif topic in topics_to_republish:\n\t\tpub_dict[topic].publish(data)\n'''
+            		else:
+            			pub_with_callbacks += '\n'
+            		            		             		
+            		#if not self.silent:  #logging function takes care of this 
                 		#	pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')'''
             		#if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
             		#	pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
@@ -170,13 +181,18 @@ class MonitorGenerator():
 				if 'subscribers' in topic_with_types_and_action:
 					tp_side += '_mon'
 
-			pub_with_callbacks += '''\ndef callback_{tp}(data):\n\tglobal ws, ws_lock'''.format(tp = tp_name.replace('/','_'))
+			pub_with_callbacks += '''\ndef callback_{tp}(data):'''.format(tp = tp_name.replace('/','_'))
+			
+			if not (tp_name in self.ordered_topics) and self.url != None and self.port != None:
+				pub_with_callbacks += '''\n\tglobal ws, ws_lock'''
+			
+			pub_with_callbacks += '''\n\td = message_converter.convert_ros_message_to_dictionary(data)'''
 			pub_with_callbacks += '''\n\td['topic'] = '{tp}' '''.format(tp = tp_name)
 			if not self.silent:
-            			pub_with_callbacks += '''\n\trospy.loginfo('monitor has observed the following message on topic '+d['topic']+': ' + str(data))'''
-			pub_with_callbacks += '''\n\td = message_converter.convert_ros_message_to_dictionary(data)'''
+            			pub_with_callbacks += '''\n\trospy.loginfo('monitor has observed the following message on topic '+d['topic']+ ":\\n" + str(data))'''	
 			
 			if tp_name in self.ordered_topics:
+				action_is_filter = ('publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action)
 				pub_with_callbacks += '''\n\taddToBuffer(d['topic'], d, data)\n'''
 			else:
 				pub_with_callbacks += '''\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''
@@ -198,7 +214,8 @@ class MonitorGenerator():
             				#if not self.silent:       #logging function takes care of this  
                 				#	pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
             				#if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
-            				#	pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
+            				if tp_name in self.topics_to_republish:
+            					pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
             		
             		
 		return pub_with_callbacks
@@ -229,8 +246,9 @@ class MonitorGenerator():
         		monitor_def = '\n'+f.read().replace('$ID$', self.monitor_id)+'\n'
         		f.close()
         		for topic_with_types_and_action in self.topics_with_types_and_action:
-        			if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
-        				tp_name = topic_with_types_and_action['name'] 
+        			tp_name = topic_with_types_and_action['name'] 
+        			#if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
+        			if tp_name in self.topics_to_republish:
         				tp_side = tp_name
         				if 'subscribers' in topic_with_types_and_action:
         					tp_side = tp_name + '_mon'
@@ -239,7 +257,7 @@ class MonitorGenerator():
         				
         				monitor_def += '''\n\tpub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = tp_name.replace('/','_'), tps = tp_side, ty = tp_type[tp_type.rfind('.')+1:])
         				monitor_def += '''\n\tpub_dict['{tp}'] = pub{tp}\n'''.format(tp = tp_name)
-                        
+                        			
         		for topic_with_types_and_action in self.topics_with_types_and_action:
         			tp_name = topic_with_types_and_action['name']
         			tp_type = topic_with_types_and_action['type']

@@ -7,13 +7,15 @@ def getTime(d): #given the message in form of a dictionary, calculates time in n
 	return pow(10,9) * d['stamp']['secs'] + d['stamp']['nsecs']
 	
 def addToBuffer(topic, d, data): #called by callback functions for all topics, buffers msgs and calls logEarliestMsg only when every topic has a msg in its buffer
-	global buffers, msgs_dict, data_dict
+	global ws_lock, buffers, msgs_dict, data_dict
 	time_nsecs = getTime(d)	
 	buffers[topic].append(time_nsecs) 
 	msgs_dict[time_nsecs] = d
 	data_dict[time_nsecs] = data
 	non_empty_buffers = [top for top in topics_to_reorder if buffers[top] != []]
-	while len(non_empty_buffers) == len(topics_to_reorder):		
-		logEarliestMsg() 		
+	while len(non_empty_buffers) == len(topics_to_reorder):	
+		ws_lock.acquire()		
+		logEarliestMsg() 	
+		ws_lock.release()		
 		non_empty_buffers = [top for top in topics_to_reorder if buffers[top] != []]	
 
