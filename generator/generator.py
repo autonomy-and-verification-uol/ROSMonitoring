@@ -30,7 +30,7 @@ class MonitorGenerator():
 	def __init__(self, monitor_id, topics_with_types_and_action, services_with_types_and_action, ordered_topics, log, url, port, oracle_action, silent, warning, ids, nodes):
 		self.input_path = './auxiliary_files/'
 		self.monitor_file = '../monitor/src/' + monitor_id + '.py'
-		self.launch_file = '../monitor/run.launch'
+		self.launch_file = '../monitor/run_{id}.launch'.format(id = monitor_id)
 		self.monitor_id = monitor_id
 		self.topics_with_types_and_action = topics_with_types_and_action
 		#added:
