@@ -1,0 +1,16 @@
+
+def get_oracle_verdict(json_dict):
+	global ws_lock, ws
+	ws_lock.acquire() #lock
+		
+	ws.send(json.dumps(json_dict))
+	msg = ws.recv()
+		
+	ws_lock.release() #unlock
+	return msg
+
+def publish_verdict(verdict):
+	verdict_msg = String()
+	verdict_msg.data = verdict
+	pub_verdict.publish(verdict_msg)
+

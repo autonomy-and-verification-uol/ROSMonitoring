@@ -45,6 +45,7 @@ class MonitorGenerator():
 		self.monitor_ids = ids
 		self.nodes = nodes
 		self.topics_to_republish = [topic_with_types_and_action['name'] for topic_with_types_and_action in self.topics_with_types_and_action if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action]
+		self.offline = self.url == None and self.port == None
 		
 	def get_standard_imports(self):
 		# get the imports the monitor will need
@@ -102,35 +103,57 @@ class MonitorGenerator():
 		for (package, msg_type) in msg_import_set:
             		msg_type_imports += '''\nfrom {p} import {t}, {t}Response'''.format(p = package, t = msg_type)
 		return msg_type_imports
-
+		
+	def get_callservice_fct(self):
+		if self.offline:
+			return '''def call_service(service, msgType, d):\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(*d['request_ordered'])\n\trospy.loginfo('The service '+str(service)+' has been called.')\n\treturn response\n'''
+		else:
+			return '''def call_service(service, msgType, json_dict):\n\tglobal dict_msgs\n\t\trequest = json_dict['request']\n\t\treq_str = str(request).replace('\n',', ')\n\t\treq_dict = message_converter.convert_ros_message_to_dictionary(request)\n\t\tkeywords = [pair_str.split(': ')[0] for pair_str in req_str.split(', ')]\n\t\treq_ordered = [req_dict[keyword] for keyword in keywords]\n\t\tsrv = rospy.ServiceProxy(service, msgType)\n\t\tresponse = srv(*req_ordered)\n\t\trospy.loginfo('The service '+str(service)+' has been called.')\n\t\tjson_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)\n\t\tdict_msgs[json_dict['time']] = response\n\t\treturn json_dict
+'''
+	
 	def get_callback_per_service(self):
 		callbacks = '\n'
 		for service_with_types_and_action in self.services_with_types_and_action:
 			
 			srv_name = service_with_types_and_action['name']
-			srv_type = service_with_types_and_action['type']
-			callbacks += '''\ndef callback_{srv}(request):\n\tglobal ws, ws_lock'''.format(srv = srv_name+'_mon'.replace('/','_'))
-			callbacks += '\n\td = dict()'
-			if not self.silent:
-				callbacks += '''\n\trospy.loginfo('monitor has observed: ' + str(request))'''
+			if srv_name[0] != '/':
+				srv_name_with_slash = '/' + srv_name
+			else:
+				srv_name_with_slash = srv_name
+				srv_name = srv_name[1:]
 				
-			callbacks += '''\n\td['request'] = message_converter.convert_ros_message_to_dictionary(request)\n\td['service'] = '{srv}'\n\td['time'] = rospy.get_time()\n\tws_lock.acquire()'''.format(srv = srv_name.replace('/','_'))
+			srv_type = service_with_types_and_action['type']
+			callbacks += '''\ndef callback_{srv}(request):\n\tglobal ws, ws_lock'''.format(srv = (srv_name_with_slash+'_mon').replace('/','_'))
+			callbacks += '''\n\td = dict()\n\treq_str = str(request).replace('\\n',', ')'''
+			if not self.silent:
+				callbacks += '''\n\trospy.loginfo('monitor has observed: ' + req_str)'''
+				
+			callbacks += '''\n\td['request'] = message_converter.convert_ros_message_to_dictionary(request)'''
+			
+			if self.offline:
+				callbacks += '''\n\tkeywords = [pair_str.split(': ')[0] for pair_str in req_str.split(', ')]\n\td['request_ordered'] = [d['request'][keyword] for keyword in keywords]'''
+			
+			callbacks += '''\n\td['service'] = '{srv}'\n\td['time'] = rospy.get_time()'''.format(srv = srv_name_with_slash)
+			if not self.offline:
+				callbacks += '''\n\tws_lock.acquire()'''
 			if self.oracle_action == 'nothing':
 				callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
-			if self.url != None and self.port != None:
+			if not self.offline:
 				callbacks += '''\n\tws.send(json.dumps(d))'''
 				if self.oracle_action == 'nothing':
 					callbacks += '''\n\tdict_msgs[d['time']] = request'''
-				callbacks += '\n\tmsg = ws.recv()\n'
-				callbacks += '''\n\tws_lock.release()\n'''
+				callbacks += '\n\tmsg = ws.recv()'
+				callbacks += '''\n\tws_lock.release()'''
 				if not self.silent:
 					callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
 				
-				callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept error:\n\t\tres = {t}Response()\n\t\tres.error = True\n\t\treturn res\n'''.format(t = srv_type[srv_type.rfind('.')+1:])
+				callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept:\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_type[srv_type.rfind('.')+1:])
 
 			else:
 				callbacks += '''\n\tlogging(d)'''
-				callbacks += '''\n\tws_lock.release()'''
+				callbacks += '''\n\tservice = d['service']\n\trospy.wait_for_service(service)'''
+				callbacks += '''\n\ttry:\n\t\tresponse = call_service(service, srv_type_dict[service], d)\n\t\tresDict = message_converter.convert_ros_message_to_dictionary(response)\n\t\tlogging(resDict)\n\t\treturn response\n\texcept Exception as e:\n\t\trospy.loginfo('Exception '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_name)
+				#callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept:\n\t\tres = {t}Response()\n\t\tres.error = True\n\t\treturn res\n'''.format(t = srv_type[srv_type.rfind('.')+1:])
 				#if not self.silent:  #logging function takes care of this 
 				#	callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
 
@@ -143,7 +166,7 @@ class MonitorGenerator():
 		if self.oracle_action == 'nothing':
                 		pub_with_callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
             		
-		if self.url != None and self.port != None:
+		if not self.offline:
                 		pub_with_callbacks += '''\n\tws.send(json.dumps(d))'''
                 		if self.oracle_action == 'nothing':
                 			pub_with_callbacks += '''\n\tdict_msgs[d['time']] = data_dict[min_time]'''
@@ -183,7 +206,7 @@ class MonitorGenerator():
 
 			pub_with_callbacks += '''\ndef callback_{tp}(data):'''.format(tp = tp_name.replace('/','_'))
 			
-			if not (tp_name in self.ordered_topics) and self.url != None and self.port != None:
+			if not (tp_name in self.ordered_topics) and not self.offline:
 				pub_with_callbacks += '''\n\tglobal ws, ws_lock'''
 			
 			pub_with_callbacks += '''\n\td = message_converter.convert_ros_message_to_dictionary(data)'''
@@ -199,7 +222,7 @@ class MonitorGenerator():
 				if self.oracle_action == 'nothing':
                 				pub_with_callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
             		
-				if self.url != None and self.port != None:
+				if not self.offline:
                 				pub_with_callbacks += '''\n\tws.send(json.dumps(d))'''
                 				if self.oracle_action == 'nothing':
                 					pub_with_callbacks += '''\n\tdict_msgs[d['time']] = data'''
@@ -269,6 +292,8 @@ class MonitorGenerator():
         		
         		for service_with_types_and_action in self.services_with_types_and_action:
         			srv_name = service_with_types_and_action['name']
+        			if srv_name[0] != '/':
+        				srv_name = '/'+srv_name
         			srv_type = service_with_types_and_action['type']
         			srv_side = srv_name + '_mon'
         			monitor_def += '''\n\tsrv_type_dict['{srv}'] = {typ}'''.format(srv = srv_name, typ = srv_type[srv_type.rfind('.')+1:])
@@ -332,8 +357,8 @@ class MonitorGenerator():
         		if not self.silent:
         			on_msg_request += '''\n\t\trospy.loginfo('The event ' + message + ' is consistent and the service', str(service), 'is called.')'''
         		on_msg_request +='''\n\t\tdel json_dict['verdict']'''
-        		
-        		on_msg_request +='''\n\t\tcall_service(service, srv_type_dict[service], json_dict)'''
+        		on_msg_request +='''\n\t\trospy.wait_for_service(service)'''
+        		on_msg_request +='''\n\t\tjson_dict = call_service(service, srv_type_dict[service], json_dict)'''
         		on_msg_request +='''\n\t\tdel json_dict['request']'''
         		on_msg_request +='''\n\t\tmsg = get_oracle_verdict(json_dict)\n\t\treturn on_message_service_response(msg)'''
         		on_msg_request +='''\n\telse:\n\t\tlogging(json_dict)'''
@@ -346,7 +371,8 @@ class MonitorGenerator():
         		
         		on_msg_request +='''\n\t\tif actions[service][0] != 'filter':'''
         		on_msg_request +='''\n\t\t\tif 'verdict' in json_dict: del json_dict['verdict']'''
-        		on_msg_request +='''\n\t\t\tcall_service(service, srv_type_dict[service], json_dict)'''
+        		on_msg_request +='''\n\t\t\trospy.wait_for_service(service)'''
+        		on_msg_request +='''\n\t\t\tjson_dict = call_service(service, srv_type_dict[service], json_dict)'''
         		on_msg_request +='''\n\t\t\tdel json_dict['request']'''
         		on_msg_request +='''\n\t\t\tmsg = get_oracle_verdict(json_dict)\n\t\t\treturn on_message_service_response(msg)'''
         		on_msg_request +='''\n\t\telse:\n\t\t\traise Exception('The request violates the monitor specification, so it has been filtered out.')'''	
@@ -391,8 +417,11 @@ class MonitorGenerator():
         			main_fct += '''\n\t\t'{tp}' : ('{act}', {w})'''.format(tp = topic_with_types_and_action['name'], act = topic_with_types_and_action['action'], w = self.warning)
         			
         		for service_with_types_and_action in self.services_with_types_and_action:
+        			srv_name = service_with_types_and_action['name'] 
+        			if srv_name[0] != '/':
+        				srv_name = '/'+srv_name
         			main_fct += ', '
-        			main_fct += '''\n\t\t'{srv}' : ('{act}', {w})'''.format(srv = service_with_types_and_action['name'], act = service_with_types_and_action['action'], w = self.warning)
+        			main_fct += '''\n\t\t'{srv}' : ('{act}', {w})'''.format(srv = srv_name, act = service_with_types_and_action['action'], w = self.warning)
         			
         		if self.url != None and self.port != None:
         			main_fct += '''\n\t}\n\twebsocket.enableTrace(True)'''
@@ -410,20 +439,43 @@ class MonitorGenerator():
         		fct += '''\n\texcept:\n\t\trospy.loginfo('Unable to log the event.')'''
         		return fct
         			
-	def get_functions(self):
-		f = open(os.path.join(self.input_path, 'functions.txt'), 'r')
+	def get_pub_error_function(self):
+		f = open(os.path.join(self.input_path, 'pub_error_function.txt'), 'r')
 		functions = '\n\n'+f.read()
-		f.close()
-		
+		f.close()		
 		return functions
 
+	def get_verdict_functions(self):
+		f = open(os.path.join(self.input_path, 'verdict_functions.txt'), 'r')
+		functions = '\n\n'+f.read()
+		f.close()
+		return functions
+		
 ### [MGS]: add services_with_types_and_action to args
 	def write_monitor(self):
         	# function which creates the python ROS monitor
         	with open(self.monitor_file, 'w') as monitor: # the monitor code will be in monitor.py
         		#if self.url != None and self.port != None:
         			# + self.get_dict_for_service_types()
-        		monitor.write(self.get_standard_imports() + self.get_imports_for_topic_msg_types() + self.get_imports_for_service_msg_types() + self.get_initialisations() +  self.get_dict_for_msg_types() + self.get_reordering_inits_and_functions() + self.get_customised_send_earliest_msg_to_oracle_function() + self.get_publisher_per_topic() + self.get_callback_per_service() + self.get_mon_node() + self.get_on_message_topic() + self.get_on_message_service_request() + self.get_on_message_service_response() + self.get_functions() + self.get_logging_function() + self.get_main_function())
+        		monitor.write(self.get_standard_imports())
+        		monitor.write(self.get_imports_for_topic_msg_types())
+        		monitor.write(self.get_imports_for_service_msg_types())
+        		monitor.write(self.get_initialisations())
+        		monitor.write(self.get_dict_for_msg_types())
+        		monitor.write(self.get_reordering_inits_and_functions()) 
+        		monitor.write(self.get_customised_send_earliest_msg_to_oracle_function())
+        		monitor.write(self.get_publisher_per_topic())
+        		monitor.write(self.get_callback_per_service())
+        		monitor.write(self.get_callservice_fct())
+        		monitor.write(self.get_mon_node())
+        		monitor.write(self.get_on_message_topic())
+        		if not self.offline:
+        			monitor.write(self.get_on_message_service_request())
+        			monitor.write(self.get_on_message_service_response())
+        			monitor.write(self.get_verdict_functions())
+        		monitor.write(self.get_pub_error_function())
+        		monitor.write(self.get_logging_function())
+        		monitor.write(self.get_main_function())
 
 	def write_launch_file(self):
 		with open(self.launch_file, 'w') as launch_file:

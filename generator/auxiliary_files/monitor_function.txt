@@ -1,5 +1,6 @@
 
 def shutdownhook():
+	global ws_lock
 	sys.stderr.write('\nInterrupted\n')
 	non_empty_buffers = [top for top in topics_to_reorder if buffers[top] != []]
 	while len(non_empty_buffers) > 0:	
