@@ -108,7 +108,7 @@ class MonitorGenerator():
 		if self.offline:
 			return '''def call_service(service, msgType, d):\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(*d['request_ordered'])\n\trospy.loginfo('The service '+str(service)+' has been called.')\n\treturn response\n'''
 		else:
-			return '''def call_service(service, msgType, json_dict):\n\tglobal dict_msgs\n\t\trequest = json_dict['request']\n\t\treq_str = str(request).replace('\n',', ')\n\t\treq_dict = message_converter.convert_ros_message_to_dictionary(request)\n\t\tkeywords = [pair_str.split(': ')[0] for pair_str in req_str.split(', ')]\n\t\treq_ordered = [req_dict[keyword] for keyword in keywords]\n\t\tsrv = rospy.ServiceProxy(service, msgType)\n\t\tresponse = srv(*req_ordered)\n\t\trospy.loginfo('The service '+str(service)+' has been called.')\n\t\tjson_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)\n\t\tdict_msgs[json_dict['time']] = response\n\t\treturn json_dict
+			return '''def call_service(service, msgType, json_dict):\n\tglobal dict_msgs\n\treq_dict = json_dict['request']\n\treq_str = str(req_dict).replace('\\n',', ').replace("'",'').replace('{','').replace('}','').strip()\n\tkeywords = [pair_str.split(': ')[0] for pair_str in req_str.split(', ')]\n\treq_ordered = [req_dict[keyword] for keyword in keywords]\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(*req_ordered)\n\trospy.loginfo('The service '+str(service)+' has been called.')\n\tjson_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)\n\tdict_msgs[json_dict['time']] = response\n\treturn json_dict
 '''
 	
 	def get_callback_per_service(self):
@@ -147,12 +147,12 @@ class MonitorGenerator():
 				if not self.silent:
 					callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
 				
-				callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept:\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_type[srv_type.rfind('.')+1:])
+				callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept Exception as e:\n\t\trospy.loginfo('Exception: '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_type[srv_type.rfind('.')+1:])
 
 			else:
 				callbacks += '''\n\tlogging(d)'''
 				callbacks += '''\n\tservice = d['service']\n\trospy.wait_for_service(service)'''
-				callbacks += '''\n\ttry:\n\t\tresponse = call_service(service, srv_type_dict[service], d)\n\t\tresDict = message_converter.convert_ros_message_to_dictionary(response)\n\t\tlogging(resDict)\n\t\treturn response\n\texcept Exception as e:\n\t\trospy.loginfo('Exception '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_name)
+				callbacks += '''\n\ttry:\n\t\tresponse = call_service(service, srv_type_dict[service], d)\n\t\tresDict = message_converter.convert_ros_message_to_dictionary(response)\n\t\tlogging(resDict)\n\t\treturn response\n\texcept Exception as e:\n\t\trospy.loginfo('Exception: '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_name)
 				#callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept:\n\t\tres = {t}Response()\n\t\tres.error = True\n\t\treturn res\n'''.format(t = srv_type[srv_type.rfind('.')+1:])
 				#if not self.silent:  #logging function takes care of this 
 				#	callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
@@ -355,7 +355,7 @@ class MonitorGenerator():
         		on_msg_request+= '''\n\t\tlogging(json_dict)'''
         		
         		if not self.silent:
-        			on_msg_request += '''\n\t\trospy.loginfo('The event ' + message + ' is consistent and the service', str(service), 'is called.')'''
+        			on_msg_request += '''\n\t\trospy.loginfo('The event ' + message + ' is consistent and the service '+ str(service)+' is called.')'''
         		on_msg_request +='''\n\t\tdel json_dict['verdict']'''
         		on_msg_request +='''\n\t\trospy.wait_for_service(service)'''
         		on_msg_request +='''\n\t\tjson_dict = call_service(service, srv_type_dict[service], json_dict)'''
