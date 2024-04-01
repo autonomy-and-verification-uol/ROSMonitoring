@@ -125,6 +125,11 @@ def main(argv):
 						if service_with_types_and_action['action'] not in ['log', 'filter']:
 							print('The actions available for the services are: log, filter.')
 							return
+
+						if 'ordered'  in service_with_types_and_action: ####<<<<< [MGS] added for ordered services
+							if service_with_types_and_action['ordered']:
+								monitor['monitor']['ordered'].append(service_with_types_and_action['name'])
+
 					if 'oracle' in monitor['monitor']:
 						url = monitor['monitor']['oracle']['url']
 						port = monitor['monitor']['oracle']['port']

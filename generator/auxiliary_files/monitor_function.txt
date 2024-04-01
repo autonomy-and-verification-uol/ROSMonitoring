@@ -1,13 +1,13 @@
 
 def shutdownhook():
-	global ws_lock
+	global ws_lock, msgs_dict
 	sys.stderr.write('\nInterrupted\n')
-	non_empty_buffers = [top for top in topics_to_reorder if buffers[top] != []]
-	while len(non_empty_buffers) > 0:	
+	buffer_occupancy = len(msgs_dict.items())
+	while buffer_occupancy > 0:	
 		ws_lock.acquire()		
 		logEarliestMsg() 	
 		ws_lock.release()		
-		non_empty_buffers = [top for top in topics_to_reorder if buffers[top] != []]
+		buffer_occupancy = len(msgs_dict.items())
 		
 def monitor():
 	global pub_error, pub_verdict
