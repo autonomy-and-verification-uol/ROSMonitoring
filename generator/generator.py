@@ -32,10 +32,28 @@ class MonitorGenerator():
 		self.monitor_file = '../monitor/src/' + monitor_id + '.py'
 		self.launch_file = '../monitor/run_{id}.launch'.format(id = monitor_id)
 		self.monitor_id = monitor_id
-		self.topics_with_types_and_action = topics_with_types_and_action
+		self.topics_with_types_and_action = []#topics_with_types_and_action
+		
+		for t_dict in topics_with_types_and_action:
+			new_dict = dict()
+			for k, v in t_dict.items():
+				if k == 'name':
+					new_dict[k] = self.getNameWithSlash(v)
+				else:
+					new_dict[k] = v	
+			self.topics_with_types_and_action.append(new_dict)
 		#added:
-		self.services_with_types_and_action = services_with_types_and_action
-		self.ordered_topics = ordered_topics
+		self.services_with_types_and_action = []#services_with_types_and_action
+		for s_dict in services_with_types_and_action:
+			new_dict = dict()
+			for k, v in s_dict.items():
+				if k == 'name':
+					new_dict[k] = self.getNameWithSlash(v)
+				else:
+					new_dict[k] = v
+			self.services_with_types_and_action.append(new_dict)
+					
+		self.ordered_topics = [self.getNameWithSlash(t) for t in ordered_topics]
 		self.log = log
 		self.url = url
 		self.port = port
@@ -106,31 +124,39 @@ class MonitorGenerator():
 		
 	def get_callservice_fct(self):
 		if self.offline:
-			return '''def call_service(service, msgType, d, request):\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(request)\n\trospy.loginfo('The service '+str(service)+' has been called.')\n\treturn response\n'''
+			s = '''def call_service(service, msgType, d, request):\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(request)'''
+			if not self.silent:
+				s += '''\n\trospy.loginfo('The service '+str(service)+' has been called.')'''
+			s += '''\n\treturn response\n'''
+			return s
 		else:
-			return '''def call_service(service, msgType, json_dict):\n\tglobal dict_msgs\n\trequest = dict_msgs[json_dict['time']]\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(request)\n\trospy.loginfo('The service '+str(service)+' has been called.')\n\tjson_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)\n\tdict_msgs[json_dict['time']] = response\n\treturn json_dict
+			s = '''def call_service(service, msgType, json_dict):\n\tglobal dict_msgs\n\trequest = dict_msgs[json_dict['time']]\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(request)'''
+			if not self.silent:
+				s += '''\n\trospy.loginfo('The service '+str(service)+' has been called.')'''
+			s += '''\n\tjson_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)\n\tdict_msgs[json_dict['time']] = response\n\treturn json_dict
 '''
+			return s
 	
 	def get_callback_per_service(self):
 		callbacks = '\n'
 		for service_with_types_and_action in self.services_with_types_and_action:
 			
 			srv_name = service_with_types_and_action['name']
-			if srv_name[0] != '/':
-				srv_name_with_slash = '/' + srv_name
-			else:
-				srv_name_with_slash = srv_name
-				srv_name = srv_name[1:]
+			#if srv_name[0] != '/':
+			#	srv_name_with_slash = '/' + srv_name
+			#else:
+			#	srv_name_with_slash = srv_name
+			#	srv_name = srv_name[1:]
 				
 			srv_type = service_with_types_and_action['type']
-			callbacks += '''\ndef callback_{srv}(request):\n\tglobal ws, ws_lock, dict_msgs'''.format(srv = (srv_name_with_slash+'_mon').replace('/','_'))
+			callbacks += '''\ndef callback_{srv}(request):\n\tglobal ws, ws_lock, dict_msgs'''.format(srv = (srv_name+'_mon').replace('/','_'))
 			callbacks += '''\n\td = dict()'''
 			if not self.silent:
 				callbacks += '''\n\trospy.loginfo('monitor has observed: ' + str(request))'''
 				
 			callbacks += '''\n\td['request'] = message_converter.convert_ros_message_to_dictionary(request)'''
 			
-			callbacks += "\n\td['service'] = '{srv}'\n\td['stamp'] = d['request']['stamp']\n\td['time'] = rospy.get_time()".format(srv = srv_name_with_slash)
+			callbacks += "\n\td['service'] = '{srv}'\n\td['stamp'] = d['request']['stamp']\n\td['time'] = rospy.get_time()".format(srv = srv_name)
 			if not self.offline:
 				callbacks += '''\n\tws_lock.acquire()'''
 			if self.oracle_action == 'nothing':
@@ -147,18 +173,18 @@ class MonitorGenerator():
 				callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept Exception as e:\n\t\trospy.loginfo('Exception: '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_type[srv_type.rfind('.')+1:])
 
 			else:
-				if srv_name_with_slash in self.ordered_topics:
+				if srv_name in self.ordered_topics:
 					callbacks += '''\n\taddToBuffer(d['service'], d, str(request))'''
 				else:
 					callbacks += '''\n\tlogging(d)'''
 				callbacks += '''\n\tservice = d['service']\n\trospy.wait_for_service(service)'''
 				callbacks += '''\n\ttry:\n\t\tresponse = call_service(service, srv_type_dict[service], d, request)\n\t\tresDict = message_converter.convert_ros_message_to_dictionary(response)'''
-				callbacks += '''\n\t\td = dict()\n\t\td['response'] = resDict\n\t\td['service'] = '{srv}'\n\t\td['stamp'] = d['response']['stamp']'''.format(srv = srv_name_with_slash)
-				if srv_name_with_slash in self.ordered_topics:
+				callbacks += '''\n\t\td = dict()\n\t\td['response'] = resDict\n\t\td['service'] = '{srv}'\n\t\td['stamp'] = d['response']['stamp']'''.format(srv = srv_name)
+				if srv_name in self.ordered_topics:
 					callbacks += '''\n\t\taddToBuffer(d['service'], d, str(response))'''
 				else:
 					callbacks += '''\n\t\tlogging(d)'''
-				callbacks += '''\n\t\treturn response\n\texcept Exception as e:\n\t\trospy.loginfo('Exception: '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_name)
+				callbacks += '''\n\t\treturn response\n\texcept Exception as e:\n\t\trospy.loginfo('Exception: '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_type[srv_type.rfind('.')+1:])
 				#callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept:\n\t\tres = {t}Response()\n\t\tres.error = True\n\t\treturn res\n'''.format(t = srv_type[srv_type.rfind('.')+1:])
 				#if not self.silent:  #logging function takes care of this 
 				#	callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
@@ -427,8 +453,8 @@ class MonitorGenerator():
         			
         		for service_with_types_and_action in self.services_with_types_and_action:
         			srv_name = service_with_types_and_action['name'] 
-        			if srv_name[0] != '/':
-        				srv_name = '/'+srv_name
+        			#if srv_name[0] != '/':
+        			#	srv_name = '/'+srv_name
         			main_fct += ', '
         			main_fct += '''\n\t\t'{srv}' : ('{act}', {w})'''.format(srv = srv_name, act = service_with_types_and_action['action'], w = self.warning)
         			
@@ -459,7 +485,17 @@ class MonitorGenerator():
 		functions = '\n\n'+f.read()
 		f.close()
 		return functions
+	
+	def getNameWithSlash(self, name):
+		if name[0] == '/':
+			return name
+		return '/'+name
 		
+	def getNameWithoutSlash(self, name):
+		if name[0] == '/':
+			return name[1:]
+		return name
+			
 ### [MGS]: add services_with_types_and_action to args
 	def write_monitor(self):
         	# function which creates the python ROS monitor
