@@ -143,7 +143,7 @@ class MonitorGenerator():
 				s += '''\n\trospy.loginfo('The service '+str(service)+' has been called.')'''
 			s += '''\n\tjson_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)\n\tdict_msgs[json_dict['time']] = response'''
 			if self.ordered_services:
-				s += '''\n\tif service in services_to_reorder:\n\t\tsrv_res[service]['response'] = response'''
+				s += '''\n\tif service in services_to_reorder:\n\t\tsrv_res[service][getTime(json_dict)] = response'''
 			s += '''\n\treturn json_dict
 '''
 			return s
@@ -154,7 +154,13 @@ class MonitorGenerator():
 			
 			srv_name = service_with_types_and_action['name']				
 			srv_type = service_with_types_and_action['type']
-			callbacks += '''\ndef callback_{srv}(request):\n\tglobal ws, ws_lock, dict_msgs'''.format(srv = (srv_name+'_mon').replace('/','_'))
+			callbacks += '''\ndef callback_{srv}(request):'''.format(srv = (srv_name+'_mon').replace('/','_'))
+			
+			if self.offline:
+				callbacks += '''\n\tglobal ws, ws_lock, dict_msgs'''
+			else:
+				callbacks += '''\n\tglobal ws, ws_lock, dict_msgs, srv_res'''
+			
 			callbacks += '''\n\td = dict()'''
 			if not self.silent:
 				callbacks += '''\n\trospy.loginfo('monitor has observed: ' + str(request))'''
@@ -181,7 +187,16 @@ class MonitorGenerator():
 				
 					callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept Exception as e:\n\t\trospy.loginfo('Exception: '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_type[srv_type.rfind('.')+1:])
 				else: #online, service is to be reordered
-					callbacks += '''\n\taddToBuffer(d['service'], d, request)\n\tsrv_res[d['service']] = {'request':d['time'], 'response':0}\n\twhile srv_res[d['service']]['response'] == 0:\n\t\tpass\n\treturn srv_res[d['service']]['response']'''
+					callbacks += '''\n\tws_lock.acquire()'''
+					callbacks += '''\n\tif not d['service'] in srv_res:\n\t\tsrv_res[d['service']] = dict()'''
+					#if self.oracle_action == 'nothing':
+					
+					callbacks += '''\n\twhile getTime(d) in srv_res[d['service']]:\n\t\td['time'] += 0.01'''
+					
+					callbacks += '''\n\tsrv_res[d['service']][getTime(d)] = 'None'\n\tws_lock.release() '''
+
+					callbacks += '''\n\taddToBuffer(d['service'], d, request)\n\twhile srv_res[d['service']][getTime(d)] == 'None':\n\t\tpass'''
+					callbacks += '''\n\tws_lock.acquire()\n\tt = getTime(d)\n\tresponse = srv_res[d['service']][t]\n\tsrv_res[d['service']].pop(t)\n\tws_lock.release()\n\treturn response'''
 
 			else:
 				if srv_name in self.ordered_topics:
