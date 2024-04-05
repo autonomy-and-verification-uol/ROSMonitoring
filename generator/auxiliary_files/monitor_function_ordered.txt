@@ -1,0 +1,19 @@
+
+def shutdownhook():
+	global ws_lock, msgs_dict
+	sys.stderr.write('\nInterrupted\n')
+	buffer_occupancy = len(msgs_dict.items())
+	while buffer_occupancy > 0:	
+		ws_lock.acquire()		
+		logEarliestMsg() 	
+		ws_lock.release()		
+		buffer_occupancy = len(msgs_dict.items())
+		
+def monitor():
+	global pub_error, pub_verdict
+	with open(log, 'w') as log_file:
+		log_file.write('')
+	rospy.init_node('$ID$', anonymous=True, disable_signals=True)
+	rospy.on_shutdown(shutdownhook) 
+	pub_error = rospy.Publisher(name = '$ID$/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)
+	pub_verdict = rospy.Publisher(name = '$ID$/monitor_verdict', data_class = String, latch = True, queue_size = 1000)

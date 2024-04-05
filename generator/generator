@@ -86,8 +86,10 @@ def main(argv):
 						monitor['monitor']['topics'] = []
 					if 'services' not in monitor['monitor']:
 						monitor['monitor']['services'] = []
-					if 'ordered' not in monitor['monitor']: ####<<<<< [MGS] added for ordered topics
-						monitor['monitor']['ordered'] = []
+					if 'ordered_topics' not in monitor['monitor']: ####<<<<< [MGS] added for ordered topics
+						monitor['monitor']['ordered_topics'] = []
+					if 'ordered_services' not in monitor['monitor']: ####<<<<< [MGS] added for ordered services
+						monitor['monitor']['ordered_services'] = []
 					for topic_with_types_and_action in monitor['monitor']['topics']:
 						if 'name' not in topic_with_types_and_action or 'type' not in topic_with_types_and_action or 'action' not in topic_with_types_and_action:
 							print('Each topic needs a name, a type and an action.')
@@ -116,7 +118,7 @@ def main(argv):
 								
 						if 'ordered'  in topic_with_types_and_action: ####<<<<< [MGS] added for ordered topics
 							if topic_with_types_and_action['ordered']:
-								monitor['monitor']['ordered'].append(topic_with_types_and_action['name'])
+								monitor['monitor']['ordered_topics'].append(topic_with_types_and_action['name'])
 							 	
 					for service_with_types_and_action in monitor['monitor']['services']:
 						if 'name' not in service_with_types_and_action or 'type' not in service_with_types_and_action or 'action' not in service_with_types_and_action:
@@ -128,7 +130,7 @@ def main(argv):
 
 						if 'ordered'  in service_with_types_and_action: ####<<<<< [MGS] added for ordered services
 							if service_with_types_and_action['ordered']:
-								monitor['monitor']['ordered'].append(service_with_types_and_action['name'])
+								monitor['monitor']['ordered_services'].append(service_with_types_and_action['name'])
 
 					if 'oracle' in monitor['monitor']:
 						url = monitor['monitor']['oracle']['url']
@@ -154,7 +156,7 @@ def main(argv):
 					else:
 						warning = 0
                     
-					mg = MonitorGenerator(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['services'], monitor['monitor']['ordered'], monitor['monitor']['log'], url, port, oracle_action, silent, warning, ids, nodes)
+					mg = MonitorGenerator(monitor['monitor']['id'], monitor['monitor']['topics'], monitor['monitor']['services'], monitor['monitor']['ordered_topics'], monitor['monitor']['ordered_services'], monitor['monitor']['log'], url, port, oracle_action, silent, warning, ids, nodes)
 					mg.write_monitor()
 					mg.write_launch_file()
 					#mg.instrument_launch_files()

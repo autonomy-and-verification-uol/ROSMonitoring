@@ -27,33 +27,19 @@ import xml.etree.ElementTree as ET
 
 class MonitorGenerator():
 
-	def __init__(self, monitor_id, topics_with_types_and_action, services_with_types_and_action, ordered_topics, log, url, port, oracle_action, silent, warning, ids, nodes):
+	def __init__(self, monitor_id, topics_with_types_and_action, services_with_types_and_action, ordered_topics, ordered_services, log, url, port, oracle_action, silent, warning, ids, nodes):
 		self.input_path = './auxiliary_files/'
 		self.monitor_file = '../monitor/src/' + monitor_id + '.py'
 		self.launch_file = '../monitor/run_{id}.launch'.format(id = monitor_id)
 		self.monitor_id = monitor_id
-		self.topics_with_types_and_action = []#topics_with_types_and_action
+		self.topics_with_types_and_action = self.get_list_with_names_with_slash(topics_with_types_and_action)#topics_with_types_and_action
 		
-		for t_dict in topics_with_types_and_action:
-			new_dict = dict()
-			for k, v in t_dict.items():
-				if k == 'name':
-					new_dict[k] = self.getNameWithSlash(v)
-				else:
-					new_dict[k] = v	
-			self.topics_with_types_and_action.append(new_dict)
 		#added:
-		self.services_with_types_and_action = []#services_with_types_and_action
-		for s_dict in services_with_types_and_action:
-			new_dict = dict()
-			for k, v in s_dict.items():
-				if k == 'name':
-					new_dict[k] = self.getNameWithSlash(v)
-				else:
-					new_dict[k] = v
-			self.services_with_types_and_action.append(new_dict)
+		self.services_with_types_and_action = self.get_list_with_names_with_slash(services_with_types_and_action) #services_with_types_and_action
 					
 		self.ordered_topics = [self.getNameWithSlash(t) for t in ordered_topics]
+		self.ordered_services = [self.getNameWithSlash(t) for t in ordered_services]
+		self.ordered_interfaces = self.ordered_topics + self.ordered_services
 		self.log = log
 		self.url = url
 		self.port = port
@@ -64,7 +50,24 @@ class MonitorGenerator():
 		self.nodes = nodes
 		self.topics_to_republish = [topic_with_types_and_action['name'] for topic_with_types_and_action in self.topics_with_types_and_action if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action]
 		self.offline = self.url == None and self.port == None
-		
+	
+	def get_service_type(self, srv_name):
+		for service_with_types_and_action in self.services_with_types_and_action:
+			if service_with_types_and_action['name'] == srv_name:
+				return service_with_types_and_action['type']
+				
+	def get_list_with_names_with_slash(self, l):
+		new_l = []
+		for l_dict in l:
+			new_dict = dict()
+			for k, v in l_dict.items():
+				if k == 'name':
+					new_dict[k] = self.getNameWithSlash(v)
+				else:
+					new_dict[k] = v
+			new_l.append(new_dict)
+		return new_l
+					
 	def get_standard_imports(self):
 		# get the imports the monitor will need
 		f = open(os.path.join(self.input_path, 'standard_imports.txt'), 'r')
@@ -86,7 +89,7 @@ class MonitorGenerator():
 		return msg_type_imports
 		
 	def get_initialisations(self):
-		inits = '\n\nws_lock = Lock()'
+		inits = '\n\nws_lock = RLock()'
 		if self.oracle_action == 'nothing':
 		    inits += '''\ndict_msgs = {}'''
 		inits += '''\npub_dict = {}'''
@@ -102,7 +105,12 @@ class MonitorGenerator():
 		topics_to_reorder = ''
 		if self.ordered_topics:
 			 topics_to_reorder = '"'+'", "'.join(self.ordered_topics)+'"'
+		services_to_reorder = ''
+		if self.ordered_services:
+			 services_to_reorder = '"'+'", "'.join(self.ordered_services)+'"'
 		reordering_inits_and_functions = '\n\ntopics_to_reorder = ['+topics_to_reorder+']' 
+		reordering_inits_and_functions += '\n\nservices_to_reorder = ['+services_to_reorder+']'
+		reordering_inits_and_functions += '\n\ninterfaces_to_reorder = topics_to_reorder + services_to_reorder'
 		f = open(os.path.join(self.input_path, 'reordering_inits_and_functions.txt'), 'r')
 		reordering_inits_and_functions += f.read()
 		f.close()
@@ -124,16 +132,19 @@ class MonitorGenerator():
 		
 	def get_callservice_fct(self):
 		if self.offline:
-			s = '''def call_service(service, msgType, d, request):\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(request)'''
+			s = '''\ndef call_service(service, msgType, d, request):\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(request)'''
 			if not self.silent:
 				s += '''\n\trospy.loginfo('The service '+str(service)+' has been called.')'''
 			s += '''\n\treturn response\n'''
 			return s
 		else:
-			s = '''def call_service(service, msgType, json_dict):\n\tglobal dict_msgs\n\trequest = dict_msgs[json_dict['time']]\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(request)'''
+			s = '''\ndef call_service(service, msgType, json_dict):\n\tglobal dict_msgs\n\trequest = dict_msgs[json_dict['time']]\n\tsrv = rospy.ServiceProxy(service, msgType)\n\tresponse = srv(request)'''
 			if not self.silent:
 				s += '''\n\trospy.loginfo('The service '+str(service)+' has been called.')'''
-			s += '''\n\tjson_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)\n\tdict_msgs[json_dict['time']] = response\n\treturn json_dict
+			s += '''\n\tjson_dict['response'] = message_converter.convert_ros_message_to_dictionary(response)\n\tdict_msgs[json_dict['time']] = response'''
+			if self.ordered_services:
+				s += '''\n\tif service in services_to_reorder:\n\t\tsrv_res[service]['response'] = response'''
+			s += '''\n\treturn json_dict
 '''
 			return s
 	
@@ -141,13 +152,7 @@ class MonitorGenerator():
 		callbacks = '\n'
 		for service_with_types_and_action in self.services_with_types_and_action:
 			
-			srv_name = service_with_types_and_action['name']
-			#if srv_name[0] != '/':
-			#	srv_name_with_slash = '/' + srv_name
-			#else:
-			#	srv_name_with_slash = srv_name
-			#	srv_name = srv_name[1:]
-				
+			srv_name = service_with_types_and_action['name']				
 			srv_type = service_with_types_and_action['type']
 			callbacks += '''\ndef callback_{srv}(request):\n\tglobal ws, ws_lock, dict_msgs'''.format(srv = (srv_name+'_mon').replace('/','_'))
 			callbacks += '''\n\td = dict()'''
@@ -157,20 +162,26 @@ class MonitorGenerator():
 			callbacks += '''\n\td['request'] = message_converter.convert_ros_message_to_dictionary(request)'''
 			
 			callbacks += "\n\td['service'] = '{srv}'\n\td['stamp'] = d['request']['stamp']\n\td['time'] = rospy.get_time()".format(srv = srv_name)
-			if not self.offline:
-				callbacks += '''\n\tws_lock.acquire()'''
-			if self.oracle_action == 'nothing':
-				callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
-			if not self.offline:
-				callbacks += '''\n\tws.send(json.dumps(d))'''
-				if self.oracle_action == 'nothing':
-					callbacks += '''\n\tdict_msgs[d['time']] = request'''
-				callbacks += '\n\tmsg = ws.recv()'
-				callbacks += '''\n\tws_lock.release()'''
-				if not self.silent:
-					callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
+			
+			
+			
+			if not self.offline: #online
+				if not srv_name in self.ordered_services: #online, service not to be reordered
+					callbacks += '''\n\tws_lock.acquire()'''
+					if self.oracle_action == 'nothing':
+						callbacks += '''\n\twhile d['time'] in dict_msgs:\n\t\td['time'] += 0.01'''
 				
-				callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept Exception as e:\n\t\trospy.loginfo('Exception: '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_type[srv_type.rfind('.')+1:])
+					callbacks += '''\n\tws.send(json.dumps(d))'''
+					if self.oracle_action == 'nothing':
+						callbacks += '''\n\tdict_msgs[d['time']] = request'''
+					callbacks += '\n\tmsg = ws.recv()'
+					callbacks += '''\n\tws_lock.release()'''
+					if not self.silent:
+						callbacks += '''\n\trospy.loginfo('event propagated to oracle')\n'''
+				
+					callbacks += '''\n\ttry:\n\t\treturn on_message_service_request(msg)\n\texcept Exception as e:\n\t\trospy.loginfo('Exception: '+str(e))\n\t\tres = {srv}Response()\n\t\tres.error = True\n\t\treturn res\n\n'''.format(srv = srv_type[srv_type.rfind('.')+1:])
+				else: #online, service is to be reordered
+					callbacks += '''\n\taddToBuffer(d['service'], d, request)\n\tsrv_res[d['service']] = {'request':d['time'], 'response':0}\n\twhile srv_res[d['service']]['response'] == 0:\n\t\tpass\n\treturn srv_res[d['service']]['response']'''
 
 			else:
 				if srv_name in self.ordered_topics:
@@ -189,10 +200,10 @@ class MonitorGenerator():
 				#if not self.silent:  #logging function takes care of this 
 				#	callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
 
-		return callbacks
+		return callbacks+'\n'
 	
 	def get_customised_send_earliest_msg_to_oracle_function(self):
-		pub_with_callbacks = '''\ndef logEarliestMsg():\n\tglobal data_dict, msgs_dict\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
+		pub_with_callbacks = '''\ndef logEarliestMsg():\n\tglobal data_dict, msgs_dict\n\tws_lock.acquire()\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
 
 		pub_with_callbacks += '''\n\td['time'] = rospy.get_time()'''
 		if self.oracle_action == 'nothing':
@@ -205,18 +216,38 @@ class MonitorGenerator():
 
                 		pub_with_callbacks += '\n\tmsg = ws.recv()'
                 		
-                		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)\n'''
+                		if not self.silent:
+                			pub_with_callbacks += '''\n\trospy.loginfo('event propagated to oracle')'''
                 		
-                		pub_with_callbacks += '''\n\tif not 'service' in d.keys():\n\t\treturn on_message_topic(msg)\n'''
+                		pub_with_callbacks += '''\n\tfor interface in interfaces_to_reorder:\n\t\tif min_time in buffers[interface]:\n\t\t\tbuffers[interface].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)\n'''
+                		
+                		pub_with_callbacks += '''\n\tws_lock.release()\n'''
+                		
+                		if self.ordered_topics:
+                			pub_with_callbacks += '''\n\tif 'topic' in d.keys():\n\t\ton_message_topic(msg)\n'''
+                		
+                		if self.ordered_services:
+                			pub_with_callbacks += '''\n\tif 'service' in d.keys():'''
+                		
+                			
+                			pub_with_callbacks += '''\n\t\tif 'request' in d.keys():\n\t\t\ttry:\n\t\t\t\ton_message_service_request(msg)\n\t\t\texcept Exception as e:\n\t\t\t\trospy.loginfo('Exception: '+str(e))'''
+                			for service in self.ordered_services:
+                				srv_type = self.get_service_type(service)
+                				pub_with_callbacks += '''\n\t\t\t\tif d['service'] == '{srv}':\n\t\t\t\t\tres = {srv_type}Response()'''.format(srv = service, srv_type = srv_type[srv_type.rfind('.')+1:])
+                				
+                			pub_with_callbacks += '''\n\t\t\t\tres.error = True\n\t\t\t\treturn res'''
+                			
+                			pub_with_callbacks += '''\n\t\tif 'response' in d.keys():\n\t\t\ton_message_service_response(msg)\n'''
 
 		else:
             		pub_with_callbacks += '''\n\tlogging(d)'''
             		
             		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)'''
-            		if self.topics_to_republish:
-            			pub_with_callbacks += '''\n\tif topic in topics_to_republish:\n\t\tpub_dict[topic].publish(data)\n'''
-            		else:
-            			pub_with_callbacks += '\n'
+            		pub_with_callbacks += '''\n\tws_lock.release()\n'''
+            		#if self.topics_to_republish: only for filtering which is only available for online monitoring
+            		#	pub_with_callbacks += '''\n\tif topic in topics_to_republish:\n\t\tpub_dict[topic].publish(data)\n'''
+            		#else:
+            		#	pub_with_callbacks += '\n'
             		            		             		
             		#if not self.silent:  #logging function takes care of this 
                 		#	pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')'''
@@ -269,8 +300,8 @@ class MonitorGenerator():
             				#if not self.silent:       #logging function takes care of this  
                 				#	pub_with_callbacks += '''\n\trospy.loginfo('event has been successfully logged')\n'''
             				#if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
-            				if tp_name in self.topics_to_republish:
-            					pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
+            				#if tp_name in self.topics_to_republish: #irrelevant to offline monitoring? 
+            				#	pub_with_callbacks += '''\n\tpub_dict['{tp}'].publish(data)\n'''.format(tp = tp_name)
             		
             		
 		return pub_with_callbacks
@@ -298,8 +329,16 @@ class MonitorGenerator():
         		# In short, the monitor observes the instrumented topics generated by the real nodes, and then it publishes (propagates) them
         		# to the usual Subscribers
         		f = open(os.path.join(self.input_path, 'monitor_function.txt'), 'r')
-        		monitor_def = '\n'+f.read().replace('$ID$', self.monitor_id)+'\n'
+        		monitor_def = '\n'+f.read()+'\n'
         		f.close()
+        		if self.ordered_interfaces:
+        			monitor_def += "\trospy.init_node('{mon_id}', anonymous=True, disable_signals=True)".format(mon_id = self.monitor_id)
+        			monitor_def += "\n\trospy.on_shutdown(shutdownhook)"
+        		else:
+        			monitor_def += "\trospy.init_node('{mon_id}', anonymous=True)".format(mon_id = self.monitor_id)
+        		monitor_def += "\n\tpub_error = rospy.Publisher(name = '{mon_id}/monitor_error', data_class = MonitorError, latch = True, queue_size = 1000)".format(mon_id = self.monitor_id)
+        		monitor_def += "\n\tpub_verdict = rospy.Publisher(name = '{mon_id}/monitor_verdict', data_class = String, latch = True, queue_size = 1000)".format(mon_id = self.monitor_id)
+		
         		for topic_with_types_and_action in self.topics_with_types_and_action:
         			tp_name = topic_with_types_and_action['name'] 
         			#if 'publishers' in topic_with_types_and_action or 'subscribers' in topic_with_types_and_action:
@@ -311,7 +350,7 @@ class MonitorGenerator():
         				tp_type = topic_with_types_and_action['type']
         				
         				monitor_def += '''\n\tpub{tp} = rospy.Publisher(name = '{tps}', data_class = {ty}, latch = True, queue_size = 1000)'''.format(tp = tp_name.replace('/','_'), tps = tp_side, ty = tp_type[tp_type.rfind('.')+1:])
-        				monitor_def += '''\n\tpub_dict['{tp}'] = pub{tp}\n'''.format(tp = tp_name)
+        				monitor_def += '''\n\tpub_dict['{tp}'] = pub{tp}\n'''.format(tp = tp_name.replace('/','_'))
                         			
         		for topic_with_types_and_action in self.topics_with_types_and_action:
         			tp_name = topic_with_types_and_action['name']
@@ -383,7 +422,10 @@ class MonitorGenerator():
         		f = open(os.path.join(self.input_path, 'on_message_service_request.txt'), 'r')
         		on_msg_request = '\n\n'+f.read()
         		f.close()
-        		on_msg_request += '''\tif service in topics_to_reorder:\n\t\taddToBuffer(service, json_dict, str(json_dict['request']))\n\telse:\n\t\tlogging(json_dict)'''
+        		if self.ordered_services:
+        			on_msg_request += '''\tif not service in services_to_reorder:\n\t\tlogging(json_dict)'''
+        		else:
+        			on_msg_request += '''\tlogging(json_dict)'''
 		
         		on_msg_request+= '''\n\tif verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':'''
         		
@@ -393,7 +435,12 @@ class MonitorGenerator():
         		on_msg_request +='''\n\t\trospy.wait_for_service(service)'''
         		on_msg_request +='''\n\t\tjson_dict = call_service(service, srv_type_dict[service], json_dict)'''
         		on_msg_request +='''\n\t\tdel json_dict['request']'''
-        		on_msg_request +='''\n\t\tmsg = get_oracle_verdict(json_dict)\n\t\treturn on_message_service_response(msg)'''
+        		
+        		if self.ordered_services:
+        			on_msg_request += '''\n\t\tif service in services_to_reorder:\n\t\t\taddToBuffer(service, json_dict, str(json_dict['response']))\n\t\telse:\n\t\t\tmsg = get_oracle_verdict(json_dict)\n\t\t\treturn on_message_service_response(msg)'''
+        		else:
+        			on_msg_request +='''\n\t\tmsg = get_oracle_verdict(json_dict)\n\t\treturn on_message_service_response(msg)'''
+        		
         		on_msg_request +='''\n\telse:'''
 
         		if not self.silent:
@@ -407,7 +454,12 @@ class MonitorGenerator():
         		on_msg_request +='''\n\t\t\trospy.wait_for_service(service)'''
         		on_msg_request +='''\n\t\t\tjson_dict = call_service(service, srv_type_dict[service], json_dict)'''
         		on_msg_request +='''\n\t\t\tdel json_dict['request']'''
-        		on_msg_request +='''\n\t\t\tmsg = get_oracle_verdict(json_dict)\n\t\t\treturn on_message_service_response(msg)'''
+        		
+        		if self.ordered_services:
+        			on_msg_request += '''\n\t\t\tif service in services_to_reorder:\n\t\t\t\taddToBuffer(service, json_dict, str(json_dict['response']))\n\t\t\telse:\n\t\t\t\tmsg = get_oracle_verdict(json_dict)\n\t\t\t\treturn on_message_service_response(msg)'''
+        		else:
+        			on_msg_request +='''\n\t\t\tmsg = get_oracle_verdict(json_dict)\n\t\t\treturn on_message_service_response(msg)'''
+
         		on_msg_request +='''\n\t\telse:\n\t\t\traise Exception('The request violates the monitor specification, so it has been filtered out.')'''	
         			       		
         		return on_msg_request
@@ -417,8 +469,11 @@ class MonitorGenerator():
         		on_msg_response = '\n\n'+f.read()
         		f.close()
         		
-        		on_msg_response += '''\tif service in topics_to_reorder:\n\t\taddToBuffer(service, json_dict, str(json_dict['response']))\n\telse:\n\t\tlogging(json_dict)'''
-        		
+        		if self.ordered_services:        		
+        			on_msg_response += '''\tif not service in services_to_reorder:\n\t\tlogging(json_dict)'''
+        		else:
+        			on_msg_response += '''\tlogging(json_dict)'''
+        			
         		on_msg_response+= '''\n\tif verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':'''
         		
         		if not self.silent:
@@ -485,7 +540,13 @@ class MonitorGenerator():
 		functions = '\n\n'+f.read()
 		f.close()
 		return functions
-	
+
+	def get_shutdownhook_function(self):
+		f = open(os.path.join(self.input_path, 'shutdownhook.txt'), 'r')
+		function = '\n\n'+f.read()
+		f.close()
+		return function
+			
 	def getNameWithSlash(self, name):
 		if name[0] == '/':
 			return name
@@ -507,17 +568,27 @@ class MonitorGenerator():
         		monitor.write(self.get_imports_for_service_msg_types())
         		monitor.write(self.get_initialisations())
         		monitor.write(self.get_dict_for_msg_types())
-        		monitor.write(self.get_reordering_inits_and_functions()) 
-        		monitor.write(self.get_customised_send_earliest_msg_to_oracle_function())
-        		monitor.write(self.get_publisher_per_topic())
-        		monitor.write(self.get_callback_per_service())
-        		monitor.write(self.get_callservice_fct())
+        		if self.ordered_interfaces:
+        			monitor.write(self.get_reordering_inits_and_functions()) 
+        			monitor.write(self.get_customised_send_earliest_msg_to_oracle_function())
+        		if self.topics_with_types_and_action:
+        			monitor.write(self.get_publisher_per_topic())
+        		
+        		if self.services_with_types_and_action:
+        			monitor.write(self.get_callback_per_service())
+        			monitor.write(self.get_callservice_fct())
+        		
         		monitor.write(self.get_mon_node())
-        		monitor.write(self.get_on_message_topic())
+        		
+        		if self.topics_with_types_and_action:
+        			monitor.write(self.get_on_message_topic())
+        		
         		if not self.offline:
         			monitor.write(self.get_on_message_service_request())
         			monitor.write(self.get_on_message_service_response())
         			monitor.write(self.get_verdict_functions())
+        			monitor.write(self.get_shutdownhook_function())
+        			
         		monitor.write(self.get_pub_error_function())
         		monitor.write(self.get_logging_function())
         		monitor.write(self.get_main_function())
