@@ -439,10 +439,7 @@ class MonitorGenerator():
         		f = open(os.path.join(self.input_path, 'on_message_service_request.txt'), 'r')
         		on_msg_request = '\n\n'+f.read()
         		f.close()
-        		if self.ordered_services:
-        			on_msg_request += '''\tif not service in services_to_reorder:\n\t\tlogging(json_dict)'''
-        		else:
-        			on_msg_request += '''\tlogging(json_dict)'''
+        		on_msg_request += '''\tlogging(json_dict)'''
 		
         		on_msg_request+= '''\n\tif verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':'''
         		
@@ -494,10 +491,7 @@ class MonitorGenerator():
         		on_msg_response = '\n\n'+f.read()
         		f.close()
         		
-        		if self.ordered_services:        		
-        			on_msg_response += '''\tif not service in services_to_reorder:\n\t\tlogging(json_dict)'''
-        		else:
-        			on_msg_response += '''\tlogging(json_dict)'''
+        		on_msg_response += '''\tlogging(json_dict)'''
         			
         		on_msg_response+= '''\n\tif verdict == 'true' or verdict == 'currently_true' or verdict == 'unknown':'''
         		
