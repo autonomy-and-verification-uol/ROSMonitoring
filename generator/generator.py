@@ -199,14 +199,14 @@ class MonitorGenerator():
 					callbacks += '''\n\tws_lock.acquire()\n\tt = getTime(d)\n\tresponse = srv_res[d['service']][t][0]\n\tsrv_res[d['service']].pop(t)\n\tws_lock.release()\n\treturn response'''
 
 			else:
-				if srv_name in self.ordered_topics:
+				if srv_name in self.ordered_services:
 					callbacks += '''\n\taddToBuffer(d['service'], d, str(request))'''
 				else:
 					callbacks += '''\n\tlogging(d)'''
 				callbacks += '''\n\tservice = d['service']\n\trospy.wait_for_service(service)'''
 				callbacks += '''\n\ttry:\n\t\tresponse = call_service(service, srv_type_dict[service], d, request)\n\t\tresDict = message_converter.convert_ros_message_to_dictionary(response)'''
 				callbacks += '''\n\t\td = dict()\n\t\td['response'] = resDict\n\t\td['service'] = '{srv}'\n\t\td['stamp'] = d['response']['stamp']'''.format(srv = srv_name)
-				if srv_name in self.ordered_topics:
+				if srv_name in self.ordered_services:
 					callbacks += '''\n\t\taddToBuffer(d['service'], d, str(response))'''
 				else:
 					callbacks += '''\n\t\tlogging(d)'''
@@ -218,7 +218,7 @@ class MonitorGenerator():
 		return callbacks+'\n'
 	
 	def get_customised_send_earliest_msg_to_oracle_function(self):
-		pub_with_callbacks = '''\ndef logEarliestMsg():\n\tglobal data_dict, msgs_dict\n\tws_lock.acquire()\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
+		pub_with_callbacks = '''\ndef logEarliestMsg():\n\tglobal data_dict, msgs_dict, buffers\n\tws_lock.acquire()\n\tmin_time = min(list(msgs_dict.keys()))\n\td = msgs_dict[min_time]\n'''
 
 		pub_with_callbacks += '''\n\td['time'] = rospy.get_time()'''
 		if self.oracle_action == 'nothing':
@@ -255,10 +255,12 @@ class MonitorGenerator():
                 			pub_with_callbacks += '''\n\t\tif 'response' in d.keys():\n\t\t\ton_message_service_response(msg)\n'''
 
 		else:
-            		pub_with_callbacks += '''\n\tlogging(d)'''
+                		pub_with_callbacks += '''\n\tlogging(d)'''
             		
-            		pub_with_callbacks += '''\n\tfor topic in topics_to_reorder:\n\t\tif min_time in buffers[topic]:\n\t\t\tbuffers[topic].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)'''
-            		pub_with_callbacks += '''\n\tws_lock.release()\n'''
+                		pub_with_callbacks += '''\n\tfor interface in interfaces_to_reorder:\n\t\tif min_time in buffers[interface]:\n\t\t\tbuffers[interface].remove(min_time)\n\t\t\tbreak\n\tmsgs_dict.pop(min_time)\n\tdata_dict.pop(min_time)\n'''
+                		
+                		pub_with_callbacks += '''\n\tws_lock.release()\n'''
+                		
             		#if self.topics_to_republish: only for filtering which is only available for online monitoring
             		#	pub_with_callbacks += '''\n\tif topic in topics_to_republish:\n\t\tpub_dict[topic].publish(data)\n'''
             		#else:

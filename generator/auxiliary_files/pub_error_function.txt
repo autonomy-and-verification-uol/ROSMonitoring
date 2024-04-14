@@ -7,7 +7,7 @@ def publish_error(topic_or_service, name, json_dict):
 	else:
 		error.m_topic = name
 	error.m_time = json_dict['time']
-	error.m_property = json_dict['spec']
+	#error.m_property = json_dict['spec']
 	error.m_content = str(dict_msgs[json_dict['time']])
 	pub_error.publish(error)
 	error=True
