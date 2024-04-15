@@ -481,7 +481,9 @@ class MonitorGenerator():
         			srv_type = service_with_types_and_action['type']
         			on_msg_request += '''\n\t\t\tif service == '{srv}':\n\t\t\t\t\tres = {srv_type}Response()'''.format(srv = srv_name, srv_type = srv_type[srv_type.rfind('.')+1:])
                 				
-        		on_msg_request += '''\n\t\t\tres.error = True\n\t\t\tdict_msgs[json_dict['time']] = res\n\t\t\tif service in services_to_reorder:\n\t\t\t\tsrv_res[service][getTime(json_dict)] = (res, True)'''
+        		on_msg_request += '''\n\t\t\tres.error = True\n\t\t\tdict_msgs[json_dict['time']] = res'''
+        		if self.ordered_services:
+        			on_msg_request += '''\n\t\t\tif service in services_to_reorder:\n\t\t\t\tsrv_res[service][getTime(json_dict)] = (res, True)'''
         		on_msg_request +='''\n\t\t\traise Exception('The request violates the monitor specification, so it has been filtered out.')\n\t\t\treturn res'''	
         			       		
         		return on_msg_request
@@ -498,7 +500,8 @@ class MonitorGenerator():
         		if not self.silent:
         			on_msg_response += '''\n\t\trospy.loginfo('The response ' + message + ' is consistent, the result is returned.')'''
         		
-        		on_msg_response += '''\n\t\tif service in services_to_reorder:\n\t\t\tres = srv_res[service][getTime(json_dict)][0]\n\t\t\tsrv_res[service][getTime(json_dict)] = (res, True)'''
+        		if self.ordered_services:
+        			on_msg_response += '''\n\t\tif service in services_to_reorder:\n\t\t\tres = srv_res[service][getTime(json_dict)][0]\n\t\t\tsrv_res[service][getTime(json_dict)] = (res, True)'''
         		
         		on_msg_response +='''\n\t\treturn dict_msgs[json_dict['time']]'''
         		
@@ -511,7 +514,9 @@ class MonitorGenerator():
         		on_msg_response += '''\n\t\tpublish_verdict(verdict)'''	
         		
         		on_msg_response +='''\n\t\tif actions[service][0] != 'filter':'''
-        		on_msg_response +='''\n\t\t\tif service in services_to_reorder:\n\t\t\t\tres = srv_res[service][getTime(json_dict)][0]\n\t\t\t\tsrv_res[service][getTime(json_dict)] = (res, True)'''
+        		
+        		if self.ordered_services:
+        			on_msg_response +='''\n\t\t\tif service in services_to_reorder:\n\t\t\t\tres = srv_res[service][getTime(json_dict)][0]\n\t\t\t\tsrv_res[service][getTime(json_dict)] = (res, True)'''
         		
         		on_msg_response +='''\n\t\t\treturn dict_msgs[json_dict['time']]'''
         		
@@ -522,7 +527,11 @@ class MonitorGenerator():
         			srv_type = service_with_types_and_action['type']
         			on_msg_response += '''\n\t\t\tif service == '{srv}':\n\t\t\t\t\tres = {srv_type}Response()'''.format(srv = srv_name, srv_type = srv_type[srv_type.rfind('.')+1:])
                 				
-        		on_msg_response += '''\n\t\t\tres.error = True\n\t\t\tdict_msgs[json_dict['time']] = res\n\t\t\tif service in services_to_reorder:\n\t\t\t\tsrv_res[service][getTime(json_dict)] = (res, True)'''
+        		on_msg_response += '''\n\t\t\tres.error = True\n\t\t\tdict_msgs[json_dict['time']] = res'''
+        		
+        		if self.ordered_services:
+        			on_msg_response += '''\n\t\t\tif service in services_to_reorder:\n\t\t\t\tsrv_res[service][getTime(json_dict)] = (res, True)'''
+        			
         		on_msg_response +='''\n\t\t\traise Exception('The response violates the monitor specification, so it has been filtered out.')\n\t\t\treturn res'''	
         			       		
         		return on_msg_response
