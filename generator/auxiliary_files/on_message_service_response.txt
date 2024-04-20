@@ -1,0 +1,6 @@
+def on_message_service_response(message):
+	global error, log, actions, ws
+	json_dict = json.loads(message)
+	verdict = str(json_dict['verdict'])
+	service = json_dict['service']
+

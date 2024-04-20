@@ -1,0 +1,15 @@
+
+def shutdownhook():
+	global ws_lock, msgs_dict
+	sys.stderr.write('\nInterrupted\n')
+	buffer_occupancy = len(msgs_dict.keys())
+	while buffer_occupancy > 0:
+		ws_lock.acquire()	
+		buffer_occupancy = len(msgs_dict.keys())
+		if buffer_occupancy > 0:
+			d, msg = logEarliestMsg() 	
+		ws_lock.release()
+		if buffer_occupancy > 0:
+			on_message_function_call(d, msg)				
+		buffer_occupancy = len(msgs_dict.keys())
+		
