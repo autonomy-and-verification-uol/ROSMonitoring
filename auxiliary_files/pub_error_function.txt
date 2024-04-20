@@ -1,0 +1,14 @@
+
+def publish_error(topic_or_service, name, json_dict):
+	global dict_msgs, error
+	error = MonitorError()
+	if topic_or_service == 'service':
+		error.m_service = name
+	else:
+		error.m_topic = name
+	error.m_time = json_dict['time']
+	#error.m_property = json_dict['spec']
+	error.m_content = str(dict_msgs[json_dict['time']])
+	pub_error.publish(error)
+	error=True
+

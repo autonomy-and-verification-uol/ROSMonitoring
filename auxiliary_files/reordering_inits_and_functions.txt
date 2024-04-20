@@ -1,0 +1,28 @@
+
+buffers = {topic_or_service:[] for topic_or_service in topics_to_reorder+services_to_reorder} #topic/service mapped to time stamp of **publication**
+msgs_dict = dict() #time stamp of msg **publication** mapped to msg (data processed into a dictionary) 
+data_dict = dict() #time stamp of msg **publication** mapped to raw data
+
+srv_res = dict() ### stores responses to service requests
+
+def getTime(d): #given the message in form of a dictionary, calculates time in nanoseconds
+	return pow(10,9) * d['stamp']['secs'] + d['stamp']['nsecs']
+	
+def addToBuffer(topic_or_service, d, data): #called by callback functions for all topics/services to reorder, buffers msgs and calls logEarliestMsg only when every topic has a msg in its buffer
+	global ws_lock, buffers, msgs_dict, data_dict, interfaces_to_reorder
+	time_nsecs = getTime(d)	
+	buffers[topic_or_service].append(time_nsecs) 
+	msgs_dict[time_nsecs] = d
+	data_dict[time_nsecs] = data
+	non_empty_buffers = [interface for interface in interfaces_to_reorder if buffers[interface] != []]
+	while len(non_empty_buffers) == len(interfaces_to_reorder):	
+		ws_lock.acquire() ## needs to be here to disallow entering logEarliestMsg if another thread empties a buffer
+		non_empty_buffers = [interface for interface in interfaces_to_reorder if buffers[interface] != []]	
+		can_pop_msg = len(non_empty_buffers) == len(interfaces_to_reorder)
+		if can_pop_msg:
+			d, msg = logEarliestMsg() 	
+		ws_lock.release()	#lock released here since buffer does not change beyond this point
+		if can_pop_msg:
+			on_message_function_call(d, msg)
+		non_empty_buffers = [interface for interface in interfaces_to_reorder if buffers[interface] != []]	
+
