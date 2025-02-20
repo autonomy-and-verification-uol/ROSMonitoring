@@ -24,11 +24,14 @@ $ sudo apt install pip
 ```
 For other distributions, or if this command does not work, follow the instructions at the link reported above.
 
-Using pip we can then install the Python libraries we need.
+We can then install the Python libraries we need (using mostly pip).
 ```bash
 $ pip install websocket_client
 $ pip install rospy_message_converter
 $ pip install pyyaml
+$ pip install jedi
+$ pip install prompt_toolkit
+$ sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0
 ```
 
 ## Prolog (http://www.swi-prolog.org/build/PPA.html):
