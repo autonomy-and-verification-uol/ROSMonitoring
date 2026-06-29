@@ -1,0 +1,16 @@
+ros_version: ros2
+monitors:
+  - monitor:
+      id: add_two_ints_guard
+      log: ./logs/add_two_ints_guard.jsonl
+      status:
+        enabled: true
+        log: ./logs/status.jsonl
+      oracle:
+        url: 127.0.0.1
+        port: 8080
+        action: nothing
+      services:
+        - name: add_two_ints
+          type: example_interfaces.srv.AddTwoInts
+          action: filter

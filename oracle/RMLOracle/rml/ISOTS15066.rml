@@ -1,0 +1,5 @@
+dmin matches {topic:'snapshot', human_operator_speed:h_speed, robot_speed:r_speed, distance_robot_human_operator:dist_h_r} with dist_h_r >= (h_speed * (0.1 + 0.5) + r_speed * 0.1 + 0 + 1.5);
+not_dmin not matches dmin;
+
+Main =  ((dmin Main) \/ (not_dmin UnSafe))?;
+UnSafe = (not_dmin UnSafe) \/ (dmin Main);

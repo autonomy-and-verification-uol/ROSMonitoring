@@ -1,0 +1,8 @@
+{"topic": "currentLoc", "data": 1, "time": 100.56}
+{"topic": "inspected", "data": true, "location": 1}
+{"topic": "radiationStatus", "data": "green"}
+{"topic": "command", "name": "move", "arg": 2}
+{"topic": "currentLoc", "data": 2, "time": 100.56}
+{"topic": "inspected", "data": true, "location": 2}
+{"topic": "radiationStatus", "data": "orange"}
+{"topic": "command", "name": "move", "arg": 3}

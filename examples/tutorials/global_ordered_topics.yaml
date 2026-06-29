@@ -1,0 +1,21 @@
+ros_version: ros2
+monitors:
+  - monitor:
+      id: global_ordered_pose_log
+      log: ./logs/global_ordered_pose_log.jsonl
+      status:
+        enabled: true
+        log: ./logs/status.jsonl
+      topics:
+        - name: ordered_alpha
+          type: geometry_msgs.msg.PoseStamped
+          action: log
+          ordering:
+            enabled: true
+            max_delay_ms: 10000
+        - name: ordered_beta
+          type: geometry_msgs.msg.PoseStamped
+          action: log
+          ordering:
+            enabled: true
+            max_delay_ms: 10000

@@ -1,0 +1,5 @@
+hello matches {topic:'chatter', data:'hello'};
+count matches {topic:'count', data:val} with val > 100;
+over18 matches {topic:'person', age: val} with val > 17;
+
+Main = (hello \/ count \/ over18)*;

@@ -1,0 +1,20 @@
+// events used to verify the contract
+inspected(i, v) matches {topic: 'inspected', location: i, data: v};
+inspected matches {topic: 'inspected'};
+green matches {topic: 'radiationStatus', data: 'green'};
+orange matches {topic: 'radiationStatus', data: 'orange'};
+red matches {topic: 'radiationStatus', data: 'red'};
+inspect(i) matches {topic: 'command', name: 'inspect', location: i};
+radiation(min, max) matches {topic: 'radiation_sensor_plugin/sensor0', value: v} with v >= min && v < max;
+command matches {topic: 'command'};
+not_command not matches command;
+r1_filter matches inspect(_) | inspected(_, _);
+r234_filter matches radiation(_, _) | green | orange | red | command;
+
+R1 = {let i; ((inspect(i) inspected(i, true)) \/ (inspected))}*;
+R2 = ((((radiation(0, 120)+) green)!) ((radiation(120, 250) \/ radiation(250, 1000))+ not_command* command)?)*;
+R3 = ((((radiation(120, 250)+) orange)!) ((radiation(0, 120) \/ radiation(250, 1000))+ not_command* command)?)*;
+R4 = ((((radiation(250, 1000)+) red)!) ((radiation(0, 120) \/ radiation(120, 250))+ not_command* command)?)*;
+
+// main term
+Main = (r1_filter >> R1) /\ (r234 >> (R2 /\ R3 /\ R4));

@@ -1,0 +1,18 @@
+move(waypoint) matches { topic: 'command', waypoint: waypoint };
+movebaseresult(waypoint, res) matches { topic: 'movebaseresult', waypoint: waypoint, result: res };
+inspect(waypoint) matches { topic: 'command', waypoint: waypoint };
+radiation(t1) matches  { topic: 'radiationsensorpluginsensor0', value: value, time: t1 } with value >= 250;
+move(newWp, t1) matches { topic: 'command', waypoint: newWp, time: t2 } with newWp == 0 || (t2>=(t1+10));
+movebasegoal(newWp) matches { topic: 'movebasegoal', goal: mBGoal } with newWp == mBGoal;
+
+Main = {
+    let waypoint, newWp, t1;
+    radiation(_)*
+    (move(waypoint) \/ movebaseresult(waypoint, 'success'))
+    radiation(_)*
+    inspect(waypoint)
+    radiation(t1)
+    radiation(_)*
+    (move(newWp, t1) \/ (movebasegoal(newWp)))
+    all
+};

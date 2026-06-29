@@ -1,0 +1,4 @@
+{"topic": "/command", "time": 10.493, "name": "move", "waypoint": 0}
+{"topic": "/command", "time": 15.68, "name": "inspect", "waypoint": 0}
+{"pose": {"position": {"y": -6.972909046963491, "x": -4.2371264539249225, "z": 0.0634973463100616}, "orientation": {"y": 1.210412000642236e-06, "x": -1.2904702712006219e-06, "z": -0.07162144139955023, "w": 0.9974318869620725}}, "value": 257.0, "topic": "/radiation_sensor_plugin/sensor_0", "header": {"stamp": {"secs": 38, "nsecs": 0}, "frame_id": "sim_sensor", "seq": 37}, "time": 16.001, "type": ""}
+{"topic": "/command", "time": 37.493, "name": "move", "waypoint": 1}

@@ -1,0 +1,18 @@
+ros_version: ros2
+monitors:
+  - monitor:
+      id: tl_chatter_guard
+      log: ./logs/tl_chatter_guard.jsonl
+      status:
+        enabled: true
+        log: ./logs/status.jsonl
+      oracle:
+        url: 127.0.0.1
+        port: 8080
+        action: nothing
+      topics:
+        - name: chatter
+          type: std_msgs.msg.String
+          action: filter
+          publishers:
+            - chatter_talker

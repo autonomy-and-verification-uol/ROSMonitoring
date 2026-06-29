@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rosmonitoring"
+version = "3.0.0"
+description = "Integrated ROSMonitoring generator for ROS1/ROS2 topics, services, ordered traces, and status reporting."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+dependencies = [
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "websocket-client>=1.7",
+  "websockets>=12.0",
+]
+online = [
+  "websocket-client>=1.7",
+]
+
+[project.scripts]
+rosmonitoring = "rosmonitoring.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rosmonitoring"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/examples",
+  "/oracle",
+  "/docs",
+  "/README.md",
+  "/LICENSE",
+  "/pyproject.toml",
+]

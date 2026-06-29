@@ -1,0 +1,5 @@
+hello matches {topic:'chatter', data:'hello'};
+world matches {topic:'madhatter', data:'world'};
+
+
+Main = (hello \/ world)*;

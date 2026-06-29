@@ -1,0 +1,39 @@
+ros_version: ros2
+path: /home/user/ros2_ws/src
+
+monitors:
+  - monitor:
+      id: battery_guard
+      log: ./logs/battery_guard.jsonl
+      silent: false
+      warning: 1
+      status:
+        enabled: true
+        log: ./logs/rosmonitoring-status.jsonl
+      oracle:
+        url: 127.0.0.1
+        port: 8080
+        action: nothing
+      topics:
+        - name: battery_percentage
+          type: std_msgs.msg.Float32
+          action: log
+          ordering:
+            enabled: true
+            source: header_stamp
+            max_delay_ms: 50
+        - name: battery_status
+          type: std_msgs.msg.String
+          action: filter
+          publishers:
+            - battery_supervisor
+          ordering:
+            enabled: true
+            max_delay_ms: 50
+      services:
+        - name: set_led
+          type: example_interfaces.srv.SetBool
+          action: filter
+          ordering:
+            enabled: true
+            max_delay_ms: 50

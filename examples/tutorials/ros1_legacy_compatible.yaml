@@ -1,0 +1,30 @@
+nodes:
+  - node:
+      name: talker
+      package: service_eg
+      path: /home/user/ros1_ws/src/service_eg/launch/run.launch
+  - node:
+      name: listener
+      package: service_eg
+      path: /home/user/ros1_ws/src/service_eg/launch/run.launch
+
+monitors:
+  - monitor:
+      id: monitor_0_ros1
+      log: ./logs/monitor_0_ros1.jsonl
+      silent: true
+      oracle:
+        port: 8080
+        url: 127.0.0.1
+        action: nothing
+      topics:
+        - name: chatter
+          type: std_msgs.msg.String
+          action: filter
+          publishers:
+            - talker
+          ordered: true
+      services:
+        - name: add_two_ints
+          type: service_eg.srv.AddTwoInts
+          action: filter

@@ -1,0 +1,17 @@
+// events used to verify the contract
+//cmd_vel matches {topic: 'cmd_vel', linear: {x: lx, y: ly, z: lz}, angular: {x: ax, y:ay, z: az}} with lx > 0 || ly > 0 || lz > 0 || ax > 0 || ay > 0 || az > 0;
+//cmd_vel_zero matches {topic: 'cmd_vel', linear: {x: lx, y: ly, z: lz}, angular: {x: ax, y:ay, z: az}} with lx <= 0 && ly > 0 && lz <= 0 && ax <= 0 && ay <= 0 && az <= 0;
+position(x, y) matches {topic: 'amcl_pose', pose: {pose: {position: {x: x, y: y}}} };
+position(x1, y1, x2, y2) matches {topic: 'amcl_pose', pose: {pose: {position: {x: x2, y: y2}}} } with (x1 < x2) || (x1 > x2) || (y1 < y2) || (y1 > y2);
+//r1_filter matches cmd_vel | cmd_vel_zero | position(_, _);
+r1_filter matches position(_, _);
+
+// requirements specified in the contract
+//R1 = {let x, y; position(x, y) R1a<x, y>};
+//R1a<x, y> = {let x1, y1; (cmd_vel+ position(x, y, x1, y1) R1a<x1, y1>)! (cmd_vel_zero+ R1a<x, y>)};
+//R1 = (((cmd_vel) position(_, _))! ((cmd_vel_zero+) position(_, _)*)?)*;
+R1 = position(_, _)*;
+
+
+// main term
+Main = (r1_filter >> R1);

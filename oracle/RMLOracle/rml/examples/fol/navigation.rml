@@ -1,0 +1,13 @@
+// events used to verify the contract
+move(x, y) matches {topic: 'command', name: 'move', x: x, y: y};
+position(x, y) matches {topic: 'amcl_pose', pose: {pose: {position: {x: x, y: y}}} };
+at(x, y, b) matches {topic: 'gazebo_radiation_plugins/At', x : x, y : y, success : b};
+r1_filter matches move(_, _) | position(_, _) | at(_, _, _);
+r2_filter matches move(_, _) | position(_, _) | at(_, _, _);
+
+// requirements specified in the contract
+R1 = {let x, y; ((((move(x, y)+) | (position(x, y)+)) at(x, y, true))! ((move(_, _) \/ position(_, _))+ at(_, _, _))?)}*;
+R2 = {let x, y; (at(x, y, true) (move(x, y)|position(x, y)))! at(_, _, _)?}*;
+
+// main term
+Main = (r1_filter >> R1) /\ (r2_filter >> R2);
