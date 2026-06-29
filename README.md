@@ -51,6 +51,7 @@ cleaner generator with regression and ROS2 integration tests.
 │   ├── README.md             # runnable tutorial catalog
 │   ├── ros2_system/          # tiny ROS2 nodes used by examples
 │   ├── tutorials/            # feature-focused monitor YAML files
+│   ├── case_studies/         # larger reproducible ROS2 case studies
 │   └── oracle_runs/          # JSONL traces for offline oracle checks
 ├── tests/                    # unit, regression, and ROS2 integration tests
 ├── docs/architecture.md      # architecture notes and event shape
@@ -67,7 +68,7 @@ For example, ROS2 generation produces an `ament_python` package at
 For runnable examples beyond the quick-start path, see
 [`examples/README.md`](examples/README.md). It includes small ROS2 application
 nodes and tutorials for TL/Reelay, RML/Prolog, LamaConv, services, ordering, and
-the dashboard.
+the dashboard, plus a turtlesim + TL/Reelay case study.
 
 ## Main Concepts
 
@@ -1055,14 +1056,19 @@ package with `colcon`, starts real ROS2 processes, and checks:
 Current verified results on this checkout:
 
 ```text
-unsourced unit/regression tests: 59 passed, 1 skipped
-full suite with /opt/ros/humble/setup.bash sourced: 60 passed
+unsourced unit/regression tests: 64 passed, 1 skipped
+full suite with /opt/ros/humble/setup.bash sourced: 65 passed
 standalone ROS2 integration: 1 passed
 ROS1 Docker smoke: 1 passed
 all tutorial YAML files validated
 10 ROS2 tutorial workspaces generated and built
 ROS1 tutorial package generated
 dashboard JavaScript syntax check passed
+turtlesim case-study monitor generated and built
+turtlesim TL/Reelay offline oracle smoke check passed
+turtlesim complete ROS2 E2E case study passed with the real turtlesim process,
+TL/Reelay oracle, dashboard API, verdict topic, topic filtering, ordered pose
+bridge, and service filtering
 ```
 
 ## Known Engineering Notes

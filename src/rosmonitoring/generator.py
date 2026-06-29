@@ -719,16 +719,35 @@ class {class_name}(Node):
             wire_event = self._wire_event(event)
             self._write_jsonl(self.log_file, wire_event)
             verdict, oracle_verdict, oracle_response = self._oracle_verdict(event)
+            direction = event.get("__direction", "message")
+            blocked = (
+                interface["action"] == "filter"
+                and not verdict
+                and (interface["kind"] == "topic" or direction == "request")
+            )
+            communication_allowed = not blocked
+            if blocked:
+                decision = "blocked"
+            elif interface["action"] == "filter" and (interface["kind"] == "topic" or direction == "request"):
+                decision = "forwarded"
+            elif interface["kind"] == "service" and direction == "response":
+                decision = "response_logged"
+            else:
+                decision = "logged"
             self._publish_status(
                 "event",
                 {{
                     "interface": interface["name"],
                     "kind": interface["kind"],
-                    "direction": event.get("__direction", "message"),
+                    "action": interface["action"],
+                    "direction": direction,
                     "event": wire_event,
                     "payload": self._event_payload_for_status(wire_event),
                     "verdict": verdict,
                     "verdict_raw": oracle_verdict,
+                    "blocked": blocked,
+                    "communication_allowed": communication_allowed,
+                    "decision": decision,
                     "terminal": self._is_terminal_verdict(oracle_verdict),
                     "will_stop": self._is_terminal_verdict(oracle_verdict) and self._can_stop_after_terminal_verdict(),
                     "ordered": interface["ordered"],
@@ -739,7 +758,7 @@ class {class_name}(Node):
             if self._should_report_violation(oracle_verdict):
                 self._log_warning("property violation on " + interface["name"])
             self._request_stop_after_terminal_verdict(oracle_verdict)
-            return verdict or interface["action"] != "filter"
+            return communication_allowed
 
     def _requires_inline_decision(self, interface: dict[str, Any], direction: str) -> bool:
         return interface["action"] == "filter" and (

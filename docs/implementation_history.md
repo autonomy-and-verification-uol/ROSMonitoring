@@ -33,6 +33,7 @@ Important source directories:
   and avoid unnecessary refactors.
 - `examples/tutorials/`: YAML configurations covering topics, services,
   ordering, dashboards, ROS1 compatibility, and different oracle styles.
+- `examples/case_studies/`: larger end-to-end ROS2 case studies.
 - `examples/ros2_system/`: small ROS2 nodes used by tutorials and manual tests.
 - `examples/oracles/`: tutorial WebSocket oracle.
 - `examples/oracle_runs/`: JSONL traces for offline examples.
@@ -344,7 +345,10 @@ Status rows include:
 - direction
 - payload
 - raw oracle verdict
-- boolean propagation decision
+- boolean oracle allow/deny verdict
+- interface action
+- whether a filter/proxy event actually blocked ROS communication
+- communication-allowed decision used by the generated proxy
 - terminal verdict marker
 - whether a passive monitor would stop
 - ordered flag
@@ -397,6 +401,19 @@ Tutorial YAML files:
 - `examples/tutorials/dashboard_mixed.yaml`
 - `examples/tutorials/ros1_legacy_compatible.yaml`
 
+Larger case studies:
+
+- `examples/case_studies/turtlesim_reelay/monitor.yaml`
+- `examples/case_studies/turtlesim_reelay/turtlesim_property.py`
+- `examples/case_studies/turtlesim_reelay/cmd_vel_driver.py`
+- `examples/case_studies/turtlesim_reelay/pose_stamped_bridge.py`
+- `examples/case_studies/turtlesim_reelay/teleport_client.py`
+- `examples/case_studies/turtlesim_reelay/unsafe_trace.jsonl`
+
+The turtlesim case study demonstrates topic filtering, passive logging, ordered
+stamped logging, service filtering, the dashboard, verdict topics, and the real
+TL/Reelay oracle in one reproducible ROS2 scenario.
+
 ROS2 example nodes:
 
 - `examples/ros2_system/chatter_talker.py`
@@ -430,7 +447,8 @@ No-ROS tests:
 - `tests/test_generator.py`
 - `tests/test_cli.py`
 - `tests/test_status.py`
-- `tests/test_examples_catalog.py`
+- `tests/test_examples_catalog.py`, including the turtlesim case-study YAML,
+  helper scripts, offline trace, and TL/Reelay property abstraction.
 - `tests/test_legacy_oracle_tree.py`
 
 ROS2 integration:
@@ -468,14 +486,16 @@ tests/ros1_docker_smoke.sh
 
 Recent verified results before this handoff:
 
-- Unsourced unit/regression suite: `59 passed, 1 skipped`.
-- Full pytest suite with ROS Humble sourced: `60 passed`.
+- Unsourced unit/regression suite: `64 passed, 1 skipped`.
+- Full pytest suite with ROS Humble sourced: `65 passed`.
 - Focused generator/status/config/events hardening suite: `49 passed`.
 - Standalone ROS2 integration: `1 passed`.
 - ROS1 Docker smoke: `ROS1 smoke ok`.
 - Tutorial matrix: all tutorial YAML files validated, 10 ROS2 packages built,
   and the ROS1 tutorial package generated.
 - Dashboard JavaScript syntax check: passed with `node --check`.
+- Turtlesim case-study monitor generated and built.
+- Turtlesim TL/Reelay offline oracle smoke check passed.
 
 ## Documentation Updates
 

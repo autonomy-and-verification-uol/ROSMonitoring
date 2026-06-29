@@ -10,6 +10,7 @@ feature concrete:
 - source-time ordering on one topic and across multiple topics;
 - browser dashboard inspection;
 - trusted legacy oracle integration.
+- a larger turtlesim + TL/Reelay case study.
 
 All commands below assume the repository root is stored in
 `ROSMONITORING_HOME`.
@@ -80,6 +81,7 @@ examples/
 ├── ros2_system/        # tiny ROS2 app nodes used by the tutorials
 ├── oracles/            # small tutorial-only WebSocket oracles
 ├── oracle_runs/        # JSONL traces for offline oracle experiments
+├── case_studies/       # larger reproducible ROS2 case studies
 └── tutorials/          # monitor YAML files for individual features/oracles
 ```
 
@@ -105,6 +107,33 @@ done
 For ROS2 tutorials, a stronger check is to generate each workspace and run
 `colcon build`. The project test suite performs this style of check on temporary
 workspaces during release verification.
+
+## Larger Case Study: Turtlesim + TL/Reelay
+
+The folder
+[`examples/case_studies/turtlesim_reelay`](case_studies/turtlesim_reelay)
+contains a reproducible ROS2 case study using the standard `turtlesim`
+application and the trusted TL/Reelay oracle.
+
+It demonstrates, in one scenario:
+
+- topic filtering for `/turtle1/cmd_vel`;
+- passive pose logging for `/turtle1/pose`;
+- ordered stamped pose logging through a small bridge node;
+- service filtering for `/turtle1/teleport_absolute`;
+- browser dashboard inspection;
+- application-facing verdicts on
+  `/turtlesim_safety_monitor/monitor_verdict`.
+
+Start with:
+
+```bash
+cd "$ROSMONITORING_HOME"
+sed -n '1,240p' examples/case_studies/turtlesim_reelay/README.md
+```
+
+This is the recommended end-to-end manual case study before moving to heavier
+Gazebo/Jackal/TurtleBot simulations.
 
 ## Example 1: TL/Reelay Oracle + Topic Filtering
 

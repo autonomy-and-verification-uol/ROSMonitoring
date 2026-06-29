@@ -290,7 +290,8 @@ HTML = """<!doctype html>
       const copy = {...item};
       ['time', 'topic', 'service', '_monitor', 'monitor', 'status', 'interface', 'kind',
        'verdict', 'verdict_raw', 'terminal', 'will_stop', 'ordered', 'oracle_response',
-       'event', 'direction', 'session_id', 'ros_version'].forEach(k => delete copy[k]);
+       'event', 'direction', 'session_id', 'ros_version', 'action', 'blocked',
+       'communication_allowed', 'decision'].forEach(k => delete copy[k]);
       return copy;
     }
     function verdictClass(value) {
@@ -316,6 +317,14 @@ HTML = """<!doctype html>
       if (item.verdict === true) return 'allow';
       if (item.verdict === false) return 'block';
       return 'unknown';
+    }
+    function decisionLabel(item) {
+      if (item.decision) return String(item.decision);
+      if (item.blocked === true) return 'blocked';
+      if (item.communication_allowed === true && item.action === 'filter') return 'forwarded';
+      if (item.verdict === false) return 'negative verdict';
+      if (item.verdict === true) return 'allow';
+      return '';
     }
     function countBy(items, keyFn) {
       const counts = new Map();
@@ -417,7 +426,7 @@ HTML = """<!doctype html>
     function forwardedEndpoint(data, item) {
       const config = interfaceConfigFor(data, item);
       const direction = item.direction || eventDirection(item);
-      const allowed = item.verdict !== false;
+      const allowed = item.blocked === true ? false : item.verdict !== false;
       if (config.kind === 'topic' && config.intercepting && config.action === 'filter' && allowed) {
         return config.name || item.interface || eventKey(item);
       }
@@ -482,8 +491,10 @@ HTML = """<!doctype html>
           const targetX = xFor(target);
           const fy = y + 44;
           eventArrow += `<line x1="${monitorX}" y1="${fy}" x2="${targetX}" y2="${fy}" stroke="#146c43" stroke-width="2" marker-end="url(#arrowOk)"></line><text x="${(monitorX + targetX) / 2}" y="${fy - 7}" text-anchor="middle" font-size="10" fill="#146c43">forward ${esc(direction)}</text>`;
-        } else if (bad) {
+        } else if (item.blocked === true) {
           eventArrow += `<text x="${monitorX + 12}" y="${y + 5}" font-size="12" fill="#b4232f">blocked</text>`;
+        } else if (bad) {
+          eventArrow += `<text x="${monitorX + 12}" y="${y + 5}" font-size="12" fill="#b4232f">logged violation</text>`;
         }
         if (item.oracle_response === null || item.oracle_response === undefined || !lanes.includes('oracle')) {
           return eventArrow;
@@ -493,7 +504,7 @@ HTML = """<!doctype html>
         return eventArrow + `<line x1="${oracleX}" y1="${oy}" x2="${monitorX}" y2="${oy}" stroke="#647181" stroke-dasharray="4 4" marker-end="url(#arrowMuted)"></line><text x="${(monitorX + oracleX) / 2}" y="${oy - 7}" text-anchor="middle" font-size="10" fill="#647181">verdict ${esc(shortLabel(JSON.stringify(item.oracle_response), 36))}</text>`;
       }).join('');
       document.getElementById('sequenceBody').innerHTML =
-        `<div class="sequence"><svg viewBox="0 0 ${width} ${height}" style="min-width:${width}px" role="img" aria-label="observed monitor sequence"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#0b5cad"></path></marker><marker id="arrowOk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#146c43"></path></marker><marker id="arrowMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#647181"></path></marker></defs>${laneLines}${arrows}</svg><div class="legend"><span><i class="dot"></i>observed by monitor</span><span><i class="dot ok-dot"></i>forwarded by filter/proxy</span><span><i class="dot bad-dot"></i>blocked verdict</span></div></div>`;
+        `<div class="sequence"><svg viewBox="0 0 ${width} ${height}" style="min-width:${width}px" role="img" aria-label="observed monitor sequence"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#0b5cad"></path></marker><marker id="arrowOk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#146c43"></path></marker><marker id="arrowMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#647181"></path></marker></defs>${laneLines}${arrows}</svg><div class="legend"><span><i class="dot"></i>observed by monitor</span><span><i class="dot ok-dot"></i>forwarded by filter/proxy</span><span><i class="dot bad-dot"></i>negative verdict or blocked event</span></div></div>`;
     }
     function renderOverview(data) {
       const rows = Object.entries(data.status.monitors || {})
@@ -541,7 +552,7 @@ HTML = """<!doctype html>
         `<code>${esc(item.monitor || '')}</code>`,
         esc(item.status || ''),
         esc(item.interface || ''),
-        item.verdict === false ? '<span class="bad">block</span>' : esc(item.verdict === true ? 'allow' : ''),
+        `<span class="${item.blocked === true ? 'bad' : ''}">${esc(decisionLabel(item))}</span>`,
         item.verdict_raw ? `<span class="${verdictClass(item.verdict_raw)}">${esc(item.verdict_raw)}</span>` : '',
         esc(item.terminal ?? ''),
         esc(item.will_stop ?? ''),

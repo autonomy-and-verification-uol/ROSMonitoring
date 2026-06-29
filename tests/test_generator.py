@@ -400,6 +400,10 @@ def test_rendered_monitor_oracle_verdicts_and_filtering_are_legacy_compatible(tm
     assert events == [sent]
     assert statuses[-1]["verdict"] is False
     assert statuses[-1]["verdict_raw"] == "currently_false"
+    assert statuses[-1]["action"] == "filter"
+    assert statuses[-1]["blocked"] is True
+    assert statuses[-1]["communication_allowed"] is False
+    assert statuses[-1]["decision"] == "blocked"
     assert statuses[-1]["oracle_response"] == {"verdict": "currently_false"}
     assert statuses[-1]["interface"] == "/battery_status"
     assert statuses[-1]["direction"] == "message"
@@ -470,6 +474,9 @@ def test_rendered_monitor_allows_and_reports_unknown_when_oracle_fails(tmp_path:
     assert statuses[-2]["status"] == "oracle_error"
     assert statuses[-1]["verdict_raw"] == "unknown"
     assert statuses[-1]["verdict"] is True
+    assert statuses[-1]["blocked"] is False
+    assert statuses[-1]["communication_allowed"] is True
+    assert statuses[-1]["decision"] == "forwarded"
     assert statuses[-1]["terminal"] is False
     assert published == ["unknown"]
 
@@ -514,6 +521,9 @@ def test_rendered_monitor_accepts_raw_string_oracle_responses(tmp_path: Path):
     ]
     assert statuses[-1]["verdict_raw"] == "violated"
     assert statuses[-1]["verdict"] is False
+    assert statuses[-1]["blocked"] is True
+    assert statuses[-1]["communication_allowed"] is False
+    assert statuses[-1]["decision"] == "blocked"
     assert statuses[-1]["terminal"] is False
     assert statuses[-1]["will_stop"] is False
 
@@ -591,6 +601,10 @@ def test_passive_rendered_monitor_stops_only_on_definitive_verdicts(tmp_path: Pa
         assert allowed is True
         assert stopped == []
         assert statuses[-1]["status"] == "event"
+        assert statuses[-1]["action"] == "log"
+        assert statuses[-1]["blocked"] is False
+        assert statuses[-1]["communication_allowed"] is True
+        assert statuses[-1]["decision"] == "logged"
         assert statuses[-1]["terminal"] is False
 
     for verdict in ("true", "false"):
@@ -598,6 +612,9 @@ def test_passive_rendered_monitor_stops_only_on_definitive_verdicts(tmp_path: Pa
         assert allowed is True
         assert stopped == [verdict]
         assert statuses[-1]["status"] == "event"
+        assert statuses[-1]["blocked"] is False
+        assert statuses[-1]["communication_allowed"] is True
+        assert statuses[-1]["decision"] == "logged"
         assert statuses[-1]["terminal"] is True
         assert statuses[-1]["will_stop"] is True
 

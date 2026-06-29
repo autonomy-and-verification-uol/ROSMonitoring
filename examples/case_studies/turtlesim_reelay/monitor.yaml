@@ -1,0 +1,31 @@
+ros_version: ros2
+monitors:
+  - monitor:
+      id: turtlesim_safety_monitor
+      log: ./logs/turtlesim_safety_monitor.jsonl
+      status:
+        enabled: true
+        log: ./logs/status.jsonl
+      oracle:
+        url: 127.0.0.1
+        port: 8080
+        action: nothing
+      topics:
+        - name: turtle1/cmd_vel
+          type: geometry_msgs.msg.Twist
+          action: filter
+          publishers:
+            - turtlesim_case_study_driver
+        - name: turtle1/pose
+          type: turtlesim.msg.Pose
+          action: log
+        - name: turtle1/pose_stamped
+          type: geometry_msgs.msg.PoseStamped
+          action: log
+          ordering:
+            enabled: true
+            max_delay_ms: 100
+      services:
+        - name: turtle1/teleport_absolute
+          type: turtlesim.srv.TeleportAbsolute
+          action: filter

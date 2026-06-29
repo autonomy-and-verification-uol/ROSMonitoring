@@ -34,6 +34,7 @@ examples_service_ws/
 examples_ordered_ws/
 examples_tl_ws/
 examples_dashboard_ws/
+turtlesim_case_ws/
 generated_ros2/
 generated/
 ROSMonitoring/

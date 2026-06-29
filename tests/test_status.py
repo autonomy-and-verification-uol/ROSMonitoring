@@ -186,7 +186,9 @@ def test_dashboard_html_shows_payload_separately_from_raw_json():
     assert "Event Timeline" in HTML
     assert "Events by Monitor" in HTML
     assert "forwarded by filter/proxy" in HTML
-    assert "blocked verdict" in HTML
+    assert "negative verdict or blocked event" in HTML
+    assert "logged violation" in HTML
+    assert "function decisionLabel" in HTML
     assert "verdict ${esc(shortLabel" in HTML
     assert "forward ${esc(direction)}" in HTML
     assert "Raw Event" in HTML

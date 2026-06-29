@@ -68,6 +68,7 @@ These tests do not require ROS to be installed. They cover:
 - status aggregation;
 - dashboard payload aggregation, limits, and multi-monitor event ordering;
 - example source compilation;
+- turtlesim + TL/Reelay case-study YAML/property validation;
 - trusted legacy oracle tree presence.
 
 ### ROS2 Integration Test
@@ -143,6 +144,44 @@ done
 This verifies that every tutorial YAML can generate, and every ROS2 tutorial
 package can build in an isolated workspace.
 
+### Optional Turtlesim Case Study Build
+
+The turtlesim case study depends on the ROS2 `turtlesim` package:
+
+```bash
+sudo apt install ros-$ROS_DISTRO-turtlesim
+```
+
+Then generate and build the monitor:
+
+```bash
+source /opt/ros/humble/setup.bash
+export PYTHONPATH="$PWD/src:${PYTHONPATH:-}"
+python3 -m rosmonitoring.cli validate examples/case_studies/turtlesim_reelay/monitor.yaml --ros-version ros2
+python3 -m rosmonitoring.cli generate examples/case_studies/turtlesim_reelay/monitor.yaml --ros-version ros2 --output /tmp/rosmonitoring_turtlesim_case/src
+(cd /tmp/rosmonitoring_turtlesim_case && colcon build)
+```
+
+The complete manual runbook is in
+`examples/case_studies/turtlesim_reelay/README.md`.
+
+When `ros-$ROS_DISTRO-turtlesim` is installed, run the complete case study
+before a major release. It should verify:
+
+- TL/Reelay oracle online connection;
+- generated monitor startup with `--dashboard` and `--fresh-session`;
+- dashboard `/api/dashboard` payload;
+- application-facing verdict topic
+  `/turtlesim_safety_monitor/monitor_verdict`;
+- accepted velocity commands forwarded from `/turtle1/cmd_vel_mon` to
+  `/turtle1/cmd_vel`;
+- unsafe velocity commands observed by the monitor but not forwarded;
+- passive `/turtle1/pose` logging;
+- ordered `/turtle1/pose_stamped` logging;
+- accepted `/turtle1/teleport_absolute_mon` service requests forwarded;
+- unsafe teleport requests observed by the monitor but not forwarded to the
+  original turtlesim service.
+
 ## Stress Tests Added During Hardening
 
 The hardening pass added or strengthened tests for:
@@ -158,19 +197,30 @@ The hardening pass added or strengthened tests for:
 - dashboard aggregation over hundreds of events from multiple monitors;
 - status aggregation over hundreds of events and multiple interfaces;
 - offline and service verdict topics in real ROS2 integration.
+- turtlesim case-study configuration, helper scripts, and TL/Reelay property
+  abstraction.
 
 ## Latest Verified Results
 
 The hardening pass on this checkout produced:
 
-- Unsourced unit/regression suite: `59 passed, 1 skipped`.
-- Full pytest suite with ROS Humble sourced: `60 passed`.
-- Focused generator/status/config/events hardening suite: `49 passed`.
+- Unsourced unit/regression suite: `64 passed, 1 skipped`.
+- Full pytest suite with ROS Humble sourced: `65 passed`.
+- Focused examples/generator/status suite: `44 passed`.
 - Standalone ROS2 integration: `1 passed`.
 - ROS1 Docker smoke: `ROS1 smoke ok`.
 - Tutorial matrix: all tutorial YAML files validated, 10 ROS2 packages built,
   and the ROS1 tutorial package generated.
 - Dashboard JavaScript syntax check: passed with `node --check`.
+- Turtlesim case-study monitor: generated and built.
+- Turtlesim TL/Reelay offline oracle smoke check: passed.
+- Turtlesim complete ROS2 E2E case study with real `turtlesim`: passed.
+  Evidence from the latest run: `1766` dashboard events, `2` dashboard
+  violations, `currently_true` and `currently_false` verdicts on the ROS verdict
+  topic, unsafe `linear.x = 3.2` observed in monitor logs but absent from
+  `/turtle1/cmd_vel`, safe teleport to `x = 7.0, y = 7.0` forwarded, and unsafe
+  teleport to `x = 11.0` blocked while the turtle remained at the accepted safe
+  pose.
 
 ## Manual Release Checklist
 

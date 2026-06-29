@@ -1,0 +1,4 @@
+{"topic":"turtle1/cmd_vel","time":1.0,"linear":{"x":1.0},"angular":{"z":0.0}}
+{"service":"turtle1/teleport_absolute","time":2.0,"request":{"x":5.5,"y":5.5,"theta":0.0}}
+{"topic":"turtle1/cmd_vel","time":3.0,"linear":{"x":4.0},"angular":{"z":0.0}}
+{"topic":"turtle1/cmd_vel","time":6.0,"linear":{"x":0.2},"angular":{"z":0.0}}
